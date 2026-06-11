@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Денчик, с днем рождения!</title>
+    <link rel="preload" href="assets/birthday-hero.png" as="image" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <canvas class="confetti" id="confetti" aria-hidden="true"></canvas>
+
+    <header class="hero">
+      <img class="hero__image" src="assets/birthday-hero.png" alt="" />
+      <div class="hero__shade"></div>
+      <nav class="topbar" aria-label="Навигация">
+        <span class="topbar__mark">DR / 2026</span>
+        <button class="ghost-button" type="button" data-scroll-to-quiz>К тесту</button>
+      </nav>
+      <div class="hero__inner">
+        <div class="hero__content">
+          <p class="eyebrow">Официальное обращение</p>
+          <h1>Здарова, Денчик</h1>
+          <p class="hero__lead">
+            Мы с Серегой не ебём что тебе подарить. И не потому что у тебя всё есть,
+            а потому что ты ничего не любишь и всех ненавидишь.
+          </p>
+          <p class="hero__lead hero__lead--compact">
+            Поэтому мы тебе сделали тест, чтобы ты выбрал наиболее благоприятный вариант
+            для себя. Либо молекулы сойдутся и мы подарим тебе подписку на варкрафт на год.
+          </p>
+          <div class="hero__actions">
+            <button class="primary-button" type="button" data-start>Выбрать подарок</button>
+            <button class="secondary-button effect-button" type="button" data-confetti>Спец-эффекты</button>
+            <button class="secondary-button effect-button effect-button--super" type="button" data-super-effects>
+              Супер-спец-эффекты
+            </button>
+            <button class="secondary-button effect-button effect-button--mega" type="button" data-mega-effects>
+              СУПЕР-МЕГА-ДУПЕР-ИМБА-СПЕЦ-ЭФФЕКТЫ РОК-Н-РОООЛ!!!
+            </button>
+            <button class="danger-button" type="button" data-reality-warning>Молекулярные поздравления</button>
+          </div>
+        </div>
+
+        <div class="laugh-stage" aria-label="Денчик смеется">
+          <div class="laugh-stage__halo"></div>
+          <div class="laugh-card" id="laughCard" data-frame="0">
+            <img class="laugh-card__frame" src="assets/denchik-laugh-1.png" alt="" />
+            <img class="laugh-card__frame" src="assets/denchik-laugh-2.png" alt="" />
+            <img class="laugh-card__frame" src="assets/denchik-laugh-3.png" alt="" />
+            <img class="laugh-card__frame" src="assets/denchik-laugh-4.png" alt="" />
+            <div class="laugh-card__fallback">
+              <span>Денчик.exe</span>
+              <strong>ха-ха</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+      <button class="scroll-cue" type="button" data-start aria-label="Перейти к тесту">
+        <span></span>
+      </button>
+    </header>
+
+    <main class="quiz-window" id="quizWindow" hidden>
+      <div class="quiz-window__bar">
+        <span>Тест на подарок</span>
+        <button class="modal__close" type="button" id="closeQuizButton" aria-label="Закрыть тест">×</button>
+      </div>
+      <section class="quiz-section" id="quiz" aria-live="polite">
+        <div class="quiz-shell">
+          <div class="tournament-layout">
+            <div class="duel-panel">
+              <div class="quiz-status">
+                <div>
+                  <p class="eyebrow" id="stepLabel">Раунд 1</p>
+                  <h2 id="questionTitle">Квалификация подарочного ада</h2>
+                </div>
+                <div class="meter" aria-hidden="true">
+                  <span id="progressBar"></span>
+                </div>
+              </div>
+
+              <div class="options-grid duel-grid" id="optionsGrid"></div>
+
+              <div class="quiz-controls">
+                <button class="text-button" type="button" id="backButton">Назад</button>
+                <button class="text-button" type="button" id="restartButton">Сначала</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="result-section" id="result" hidden>
+        <div class="result-layout">
+          <div class="result-copy">
+            <p class="eyebrow">Подарочный вердикт</p>
+            <h2 id="resultTitle">Подарок выбран</h2>
+            <p id="resultText"></p>
+            <div class="result-actions">
+              <button class="primary-button" type="button" id="revealButton">Открыть подарок</button>
+              <button class="secondary-button" type="button" id="retryButton">Пройти еще раз</button>
+            </div>
+          </div>
+          <article class="gift-card" id="giftCard">
+            <div class="gift-card__media">
+              <img id="resultImage" src="assets/gift-adventure.png" alt="" />
+            </div>
+            <div class="gift-card__body">
+              <p class="gift-card__tag" id="resultTag">Сюрприз</p>
+              <h3 id="giftName">Подарок</h3>
+              <p id="giftCaption"></p>
+            </div>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <div class="modal" id="giftModal" hidden>
+      <div class="modal__backdrop" data-close-modal></div>
+      <div class="modal__dialog" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <button class="modal__close" type="button" data-close-modal aria-label="Закрыть">×</button>
+        <p class="eyebrow">Сертификат именинника</p>
+        <h2 id="modalTitle">Денчик получает подарок</h2>
+        <p id="modalText"></p>
+        <button class="primary-button" type="button" data-close-modal>Забираю</button>
+      </div>
+    </div>
+
+    <div class="reality-warning" id="realityWarning" hidden>
+      <div class="modal__backdrop" data-close-reality-warning></div>
+      <div class="reality-warning__dialog" role="dialog" aria-modal="true" aria-labelledby="realityWarningTitle">
+        <button class="modal__close" type="button" data-close-reality-warning aria-label="Закрыть">×</button>
+        <p class="eyebrow">Красная кнопка</p>
+        <h2 id="realityWarningTitle">Вы уверены в своём выборе?</h2>
+        <p>
+          От этих эффектов может порваться ткань реальности или ещё хуже ваш компьютер взорвётся.
+        </p>
+        <div class="reality-warning__actions">
+          <button class="danger-button" type="button" data-break-reality>Да, ломаем</button>
+          <button class="secondary-button" type="button" data-close-reality-warning>Я передумал</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="reality-break" id="realityBreak" hidden aria-hidden="true">
+      <div class="reality-break__scan"></div>
+      <img class="reality-break__face" src="assets/screamer 1.png" alt="" />
+      <div class="reality-break__text">АААААААААААААААААА</div>
+      <div class="bit-storm" id="bitStorm"></div>
+    </div>
+
+    <div class="reality-decay" id="realityDecay" hidden aria-hidden="true">
+      <div class="reality-decay__lights"></div>
+      <div class="decay-pixels" id="decayPixels"></div>
+      <div class="reality-decay__message">молекулы расходятся</div>
+    </div>
+
+    <div class="round-announcer" id="roundAnnouncer" hidden aria-live="assertive">
+      <div>
+        <p class="eyebrow" id="roundAnnouncerLabel">Раунд завершён</p>
+        <h2 id="roundAnnouncerTitle">Начинается следующий круг</h2>
+      </div>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
