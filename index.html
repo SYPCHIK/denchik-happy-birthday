@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Денчик, с днем рождения!</title>
-    <link rel="preload" href="assets/birthday-hero.png" as="image" />
+    <link rel="preload" href="assets/birthday-hero.jpg" as="image" />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -15,7 +15,12 @@
     </button>
 
     <header class="hero">
-      <img class="hero__image" src="assets/birthday-hero.png" alt="" />
+      <img
+        class="hero__image"
+        src="assets/birthday-hero.jpg"
+        onerror="this.onerror = null; this.src = 'assets/birthday-hero.png';"
+        alt=""
+      />
       <div class="hero__shade"></div>
       <nav class="topbar" aria-label="Навигация">
         <span class="topbar__mark">DR / 2026</span>
@@ -23,7 +28,7 @@
       <div class="hero__inner">
         <div class="hero__content">
           <p class="eyebrow">Официальное обращение</p>
-          <h1>Здарова, Денчик</h1>
+          <h1>Здарова, Денчик <span class="splash" id="splashText" aria-hidden="true"></span></h1>
           <p class="hero__lead">
             Мы с Серегой не ебём что тебе подарить. И не потому что у тебя всё есть,
             а потому что ты ничего не любишь и всех ненавидишь.
@@ -33,14 +38,16 @@
             для себя. Либо молекулы сойдутся и мы подарим тебе подписку на варкрафт на год.
           </p>
           <div class="hero__actions">
-            <button class="secondary-button effect-button" type="button" data-confetti>Спец-эффекты</button>
-            <button class="secondary-button effect-button effect-button--super" type="button" data-super-effects>
-              Супер-спец-эффекты
-            </button>
-            <button class="secondary-button effect-button effect-button--mega" type="button" data-mega-effects>
-              СУПЕР-МЕГА-ДУПЕР-ИМБА-СПЕЦ-ЭФФЕКТЫ РОК-Н-РОООЛ!!!
-            </button>
-            <button class="danger-button" type="button" data-reality-warning>Молекулярные поздравления</button>
+            <div class="hero__effect-actions">
+              <button class="secondary-button effect-button" type="button" data-confetti>Спец-эффекты</button>
+              <button class="secondary-button effect-button effect-button--super" type="button" data-super-effects>
+                Супер-спец-эффекты
+              </button>
+              <button class="secondary-button effect-button effect-button--mega" type="button" data-mega-effects>
+                СУПЕР-МЕГА-ДУПЕР-ИМБА-СПЕЦ-ЭФФЕКТЫ РОК-Н-РОООЛ!!!
+              </button>
+              <button class="danger-button" type="button" data-reality-warning>Молекулярные поздравления</button>
+            </div>
             <button class="primary-button hero__gift-button" type="button" data-start>Выбрать подарок</button>
           </div>
         </div>
@@ -59,9 +66,6 @@
           </div>
         </div>
       </div>
-      <button class="scroll-cue" type="button" data-start aria-label="Перейти к тесту">
-        <span></span>
-      </button>
     </header>
 
     <main class="quiz-window" id="quizWindow" hidden>

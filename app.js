@@ -117,6 +117,16 @@ const TOURNAMENT_CHOICE_ADVANCE_DELAY = 120;
 const TOURNAMENT_CLICK_SOUND_SRC = "assets/minecraft_click.mp3";
 const TOURNAMENT_CLICK_SOUND_OFFSET = 0.2;
 
+const SOUND_MUTED_STORAGE_KEY = "denchik-sound-muted";
+
+function readStoredMuteState() {
+  try {
+    return window.localStorage.getItem(SOUND_MUTED_STORAGE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
 const state = {
   roundIndex: 0,
   matchIndex: 0,
@@ -145,9 +155,11 @@ const state = {
   activeTheme: "main",
   musicStarted: false,
   themeFadeTimer: null,
+  soundMuted: readStoredMuteState(),
 };
 
 const els = {
+  musicToggle: document.querySelector("#musicToggle"),
   startButtons: document.querySelectorAll("[data-start], [data-scroll-to-quiz]"),
   confettiButton: document.querySelector("[data-confetti]"),
   superEffectsButton: document.querySelector("[data-super-effects]"),
@@ -317,6 +329,17 @@ function renderTournamentMatch() {
 
       isChosen = true;
       card.classList.add("gift-duel-card--chosen");
+
+      const rect = card.getBoundingClientRect();
+      let particleX = rect.left + rect.width / 2;
+      let particleY = rect.top + rect.height / 2;
+
+      if (typeof event?.clientX === "number" && (event.clientX !== 0 || event.clientY !== 0)) {
+        particleX = event.clientX;
+        particleY = event.clientY;
+      }
+
+      spawnBlockParticles(particleX, particleY);
       window.setTimeout(() => selectTournamentWinner(giftKey), TOURNAMENT_CHOICE_ADVANCE_DELAY);
     };
 
@@ -596,21 +619,47 @@ function setupConfetti() {
     lights.forEach((light) => {
       const age = (now - light.createdAt) / light.ttl;
       const alpha = light.alpha * Math.sin(Math.PI * age);
+      const alphaHex = (value) => Math.round(Math.min(1, Math.max(0, value)) * 255).toString(16).padStart(2, "0");
+      // лампа закреплена сверху, по дуге ходит широкий конец луча
       const sweep = Math.sin(now / light.speed + light.phase) * light.sweep;
-      const topX = light.originX + sweep;
-      const gradient = ctx.createLinearGradient(topX, light.originY, light.targetX, light.targetY);
-      gradient.addColorStop(0, `${light.color}${Math.round(alpha * 255).toString(16).padStart(2, "0")}`);
-      gradient.addColorStop(1, `${light.color}00`);
+      const baseX = light.targetX + sweep;
 
       ctx.save();
       ctx.globalCompositeOperation = "screen";
+
+      // широкий мягкий конус
+      const cone = ctx.createLinearGradient(light.originX, light.originY, baseX, light.targetY);
+      cone.addColorStop(0, `${light.color}${alphaHex(alpha)}`);
+      cone.addColorStop(1, `${light.color}00`);
       ctx.beginPath();
-      ctx.moveTo(topX, light.originY);
-      ctx.lineTo(light.targetX - light.width, light.targetY);
-      ctx.lineTo(light.targetX + light.width, light.targetY);
+      ctx.moveTo(light.originX, light.originY);
+      ctx.lineTo(baseX - light.width, light.targetY);
+      ctx.lineTo(baseX + light.width, light.targetY);
       ctx.closePath();
-      ctx.fillStyle = gradient;
+      ctx.fillStyle = cone;
       ctx.fill();
+
+      // яркое ядро луча
+      const core = ctx.createLinearGradient(light.originX, light.originY, baseX, light.targetY);
+      core.addColorStop(0, `${light.color}${alphaHex(alpha * 1.8)}`);
+      core.addColorStop(1, `${light.color}00`);
+      ctx.beginPath();
+      ctx.moveTo(light.originX, light.originY);
+      ctx.lineTo(baseX - light.width * 0.32, light.targetY);
+      ctx.lineTo(baseX + light.width * 0.32, light.targetY);
+      ctx.closePath();
+      ctx.fillStyle = core;
+      ctx.fill();
+
+      // светящийся фонарь у источника
+      const glow = ctx.createRadialGradient(light.originX, light.originY, 0, light.originX, light.originY, 32);
+      glow.addColorStop(0, `${light.color}${alphaHex(alpha * 2.4)}`);
+      glow.addColorStop(1, `${light.color}00`);
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(light.originX, light.originY, 32, 0, Math.PI * 2);
+      ctx.fill();
+
       ctx.restore();
     });
   }
@@ -648,6 +697,16 @@ function setupConfetti() {
         ctx.stroke();
       } else if (piece.shape === "star") {
         drawStar(piece.size * 0.56);
+      } else if (piece.shape === "orb") {
+        const radius = piece.size * 0.5;
+        const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, radius);
+        gradient.addColorStop(0, "#f4ffd9");
+        gradient.addColorStop(0.55, piece.color);
+        gradient.addColorStop(1, `${piece.color}00`);
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(0, 0, radius, 0, Math.PI * 2);
+        ctx.fill();
       } else {
         ctx.fillRect(-piece.size / 2, -piece.size / 3, piece.size, piece.size * 0.66);
       }
@@ -708,17 +767,17 @@ function setupConfetti() {
     for (let index = 0; index < count; index += 1) {
       lights.push({
         originX: random(window.innerWidth * 0.02, window.innerWidth * 0.98),
-        originY: random(-40, 22),
+        originY: random(-14, 14),
         targetX: random(window.innerWidth * 0.08, window.innerWidth * 0.92),
         targetY: window.innerHeight + random(20, 160),
         width: random(70, 190),
         color: lightColors[index % lightColors.length],
-        alpha: random(0.22, 0.46),
+        alpha: random(0.26, 0.5),
         ttl,
         createdAt: performance.now(),
-        speed: random(160, 360),
+        speed: random(220, 420),
         phase: random(0, Math.PI * 2),
-        sweep: random(10, 80),
+        sweep: random(80, 230),
       });
     }
 
@@ -731,6 +790,26 @@ function setupConfetti() {
 
   window.stageLights = addStageLights;
 
+  // зелёные орбы опыта, всплывающие снизу, как в майнкрафте
+  window.xpOrbRise = (count = 24) => {
+    for (let index = 0; index < count; index += 1) {
+      addBurst(1, {
+        x: random(window.innerWidth * 0.05, window.innerWidth * 0.95),
+        y: window.innerHeight + random(0, 50),
+        angle: -Math.PI / 2,
+        spread: 0.5,
+        power: random(2.2, 3.8),
+        gravity: -0.012,
+        drag: 0.997,
+        shape: "orb",
+        colors: ["#8bd17c", "#aef25a", "#7ce85a", "#caff70"],
+        minSize: 6,
+        maxSize: 13,
+        ttl: random(2400, 3800),
+      });
+    }
+  };
+
   resize();
   window.addEventListener("resize", resize);
 }
@@ -740,6 +819,214 @@ function addScreenFlash() {
   flash.className = "stage-flash";
   document.body.append(flash);
   flash.addEventListener("animationend", () => flash.remove(), { once: true });
+}
+
+function prefersReducedMotion() {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+function launchFirework({ x, delay = 0, color } = {}) {
+  if (prefersReducedMotion()) {
+    return;
+  }
+
+  window.setTimeout(() => {
+    const rocket = document.createElement("span");
+    rocket.className = "firework-rocket";
+    const originX = x ?? window.innerWidth * (0.1 + Math.random() * 0.8);
+    const targetY = window.innerHeight * (0.16 + Math.random() * 0.3);
+    const duration = 520 + Math.random() * 280;
+    const hue = color ?? randomFromList(["#ffd66b", "#20c5ba", "#ff6b5f", "#8bd17c", "#fff6e9"]);
+    rocket.style.setProperty("--x", `${originX}px`);
+    rocket.style.setProperty("--ty", `${targetY - window.innerHeight}px`);
+    rocket.style.setProperty("--duration", `${duration}ms`);
+    rocket.style.setProperty("--color", hue);
+    rocket.addEventListener(
+      "animationend",
+      () => {
+        rocket.remove();
+        burstConfetti(48, {
+          x: originX,
+          y: targetY,
+          spread: Math.PI * 2,
+          power: 9.5,
+          gravity: 0.05,
+          ttl: 2200,
+        });
+        addSoundRing(originX, targetY, hue);
+      },
+      { once: true },
+    );
+    document.body.append(rocket);
+  }, delay);
+}
+
+const MEGA_WORDS = ["РОК-Н-РОООЛ!!!", "ИМБА!", "МЕГА-БУМ!", "С НАСТУПАЮЩИМ, ДЕНЧИК!", "ЗАРУБА ГОДА!"];
+
+const BOOM_PUFF_COLORS = ["#fff6e9", "#dcdcdc", "#a8a8a8", "#ffae5e", "#ff7b3a"];
+
+function explodeMinecraft(x, y, { puffs = 14, blocks = 16 } = {}) {
+  if (prefersReducedMotion()) {
+    return;
+  }
+
+  addScreenFlash();
+  addSoundRing(x, y, "#fff6e9");
+  spawnBlockParticles(x, y, blocks);
+
+  for (let index = 0; index < puffs; index += 1) {
+    const puff = document.createElement("span");
+    puff.className = "boom-puff";
+    const angle = Math.random() * Math.PI * 2;
+    const distance = 26 + Math.random() * 110;
+    puff.style.setProperty("--x", `${x}px`);
+    puff.style.setProperty("--y", `${y}px`);
+    puff.style.setProperty("--dx", `${Math.cos(angle) * distance}px`);
+    puff.style.setProperty("--dy", `${Math.sin(angle) * distance - 18}px`);
+    puff.style.setProperty("--size", `${12 + Math.random() * 22}px`);
+    puff.style.setProperty("--duration", `${420 + Math.random() * 260}ms`);
+    puff.style.setProperty("--color", randomFromList(BOOM_PUFF_COLORS));
+    puff.addEventListener("animationend", () => puff.remove(), { once: true });
+    document.body.append(puff);
+  }
+
+  document.documentElement.animate(
+    [
+      { transform: "translate(0, 0)" },
+      { transform: "translate(4px, -3px)" },
+      { transform: "translate(-3px, 3px)" },
+      { transform: "translate(0, 0)" },
+    ],
+    { duration: 220, iterations: 1 },
+  );
+}
+
+function dropTnt({ x, delay = 0 } = {}) {
+  if (prefersReducedMotion()) {
+    return;
+  }
+
+  window.setTimeout(() => {
+    const tnt = document.createElement("span");
+    tnt.className = "tnt-block";
+    const originX = x ?? window.innerWidth * (0.12 + Math.random() * 0.76);
+    const targetY = window.innerHeight * (0.5 + Math.random() * 0.3);
+    tnt.style.setProperty("--x", `${originX}px`);
+    tnt.style.setProperty("--size", `${30 + Math.random() * 14}px`);
+    tnt.style.setProperty("--dy", `${targetY + 48}px`);
+    tnt.style.setProperty("--rot", `${(Math.random() * 2 - 1) * 36}deg`);
+    tnt.style.setProperty("--fall", `${680 + Math.random() * 320}ms`);
+    tnt.addEventListener("animationend", (event) => {
+      if (event.animationName !== "tntFall") {
+        return;
+      }
+
+      tnt.remove();
+      explodeMinecraft(originX, targetY, { puffs: 14, blocks: 16 });
+    });
+    document.body.append(tnt);
+  }, delay);
+}
+
+function summonCreeper({ delay = 0 } = {}) {
+  if (prefersReducedMotion()) {
+    return;
+  }
+
+  window.setTimeout(() => {
+    const creeper = document.createElement("span");
+    creeper.className = "creeper-face";
+    const x = window.innerWidth * (0.15 + Math.random() * 0.7);
+    const y = window.innerHeight * (0.3 + Math.random() * 0.4);
+    creeper.style.setProperty("--x", `${x}px`);
+    creeper.style.setProperty("--y", `${y}px`);
+    creeper.addEventListener(
+      "animationend",
+      () => {
+        creeper.remove();
+        explodeMinecraft(x, y, { puffs: 24, blocks: 28 });
+      },
+      { once: true },
+    );
+    document.body.append(creeper);
+  }, delay);
+}
+
+function showMegaWord(text = randomFromList(MEGA_WORDS)) {
+  if (prefersReducedMotion()) {
+    return;
+  }
+
+  const word = document.createElement("div");
+  word.className = "mega-word";
+  word.textContent = text;
+  word.addEventListener("animationend", () => word.remove(), { once: true });
+  document.body.append(word);
+}
+
+function rainBlocks(count = 26) {
+  if (prefersReducedMotion()) {
+    return;
+  }
+
+  for (let index = 0; index < count; index += 1) {
+    window.setTimeout(() => {
+      const particle = document.createElement("span");
+      particle.className = "block-particle";
+      const drift = (Math.random() * 2 - 1) * 70;
+      particle.style.setProperty("--x", `${Math.random() * window.innerWidth}px`);
+      particle.style.setProperty("--y", "-30px");
+      particle.style.setProperty("--mx", `${drift * 0.5}px`);
+      particle.style.setProperty("--my", `${window.innerHeight * 0.45}px`);
+      particle.style.setProperty("--dx", `${drift}px`);
+      particle.style.setProperty("--dy", `${window.innerHeight + 90}px`);
+      particle.style.setProperty("--rot", `${(Math.random() * 2 - 1) * 420}deg`);
+      particle.style.setProperty("--size", `${10 + Math.random() * 12}px`);
+      particle.style.setProperty("--duration", `${900 + Math.random() * 700}ms`);
+      particle.addEventListener("animationend", () => particle.remove(), { once: true });
+      document.body.append(particle);
+    }, Math.random() * 1000);
+  }
+}
+
+function spawnBlockParticles(x, y, count = 16) {
+  for (let index = 0; index < count; index += 1) {
+    const particle = document.createElement("span");
+    particle.className = "block-particle";
+
+    const spreadX = (Math.random() * 2 - 1) * 80;
+    const lift = -(26 + Math.random() * 64);
+    particle.style.setProperty("--x", `${x}px`);
+    particle.style.setProperty("--y", `${y}px`);
+    particle.style.setProperty("--mx", `${spreadX}px`);
+    particle.style.setProperty("--my", `${lift}px`);
+    particle.style.setProperty("--dx", `${spreadX * (1.5 + Math.random() * 0.9)}px`);
+    particle.style.setProperty("--dy", `${90 + Math.random() * 170}px`);
+    particle.style.setProperty("--rot", `${(Math.random() * 2 - 1) * 300}deg`);
+    particle.style.setProperty("--size", `${6 + Math.random() * 9}px`);
+    particle.style.setProperty("--duration", `${620 + Math.random() * 420}ms`);
+    particle.addEventListener("animationend", () => particle.remove(), { once: true });
+    document.body.append(particle);
+  }
+}
+
+const SPLASH_TEXTS = [
+  "Также попробуйте варкрафт!",
+  "Компания «Чупасичкины» представляет",
+  "Денчик edition!",
+  "Теперь на год старше!",
+  "Молекулы сойдутся!",
+  "Не баг, а фича!",
+  "Подарок не выбран!",
+  "ха-ха классика",
+];
+
+function setupSplashText() {
+  const splash = document.querySelector("#splashText");
+
+  if (splash) {
+    splash.textContent = randomFromList(SPLASH_TEXTS);
+  }
 }
 
 function addSoundRing(x = window.innerWidth / 2, y = window.innerHeight / 2, color = "#ffd66b") {
@@ -984,6 +1271,7 @@ function getMainTheme() {
     state.mainTheme.loop = true;
     state.mainTheme.preload = "auto";
     state.mainTheme.volume = MAIN_THEME_VOLUME;
+    state.mainTheme.muted = state.soundMuted;
   }
 
   return state.mainTheme;
@@ -995,6 +1283,7 @@ function getFinalTheme() {
     state.finalTheme.loop = true;
     state.finalTheme.preload = "auto";
     state.finalTheme.volume = FINAL_THEME_VOLUME;
+    state.finalTheme.muted = state.soundMuted;
   }
 
   return state.finalTheme;
@@ -1079,6 +1368,40 @@ function setupBackgroundMusic() {
   ["pointerdown", "keydown", "touchstart"].forEach((eventName) => {
     document.addEventListener(eventName, start, { once: true });
   });
+}
+
+function getThemeAudioElements() {
+  return [state.mainTheme, state.finalTheme].filter(Boolean);
+}
+
+function updateMusicToggleButton() {
+  const icon = els.musicToggle.querySelector("span");
+  els.musicToggle.classList.toggle("music-toggle--muted", state.soundMuted);
+  icon.textContent = state.soundMuted ? "🔇" : "🔊";
+  els.musicToggle.setAttribute("aria-label", state.soundMuted ? "Включить музыку" : "Выключить музыку");
+  els.musicToggle.title = state.soundMuted ? "Музыка выключена" : "Музыка включена";
+}
+
+function setSoundMuted(muted) {
+  state.soundMuted = muted;
+
+  try {
+    window.localStorage.setItem(SOUND_MUTED_STORAGE_KEY, muted ? "1" : "0");
+  } catch {}
+
+  getThemeAudioElements().forEach((audio) => {
+    audio.muted = muted;
+  });
+
+  updateMusicToggleButton();
+}
+
+function setupSoundToggle() {
+  els.musicToggle.addEventListener("click", () => {
+    setSoundMuted(!state.soundMuted);
+  });
+
+  updateMusicToggleButton();
 }
 
 function getEffectAudioContext() {
@@ -1384,6 +1707,8 @@ function triggerSpecialEffects() {
     power: 7,
   });
   addSoundRing(window.innerWidth * 0.5, window.innerHeight * 0.45, "#ffd66b");
+  launchFirework({ x: window.innerWidth * (0.18 + Math.random() * 0.14), delay: 140 });
+  launchFirework({ x: window.innerWidth * (0.68 + Math.random() * 0.14), delay: 420 });
 }
 
 function triggerSpecialEffectsWithSound() {
@@ -1424,6 +1749,9 @@ function triggerSuperEffects() {
   stageLights(7, 2100);
   addScreenFlash();
   triggerSpecialEffects();
+  xpOrbRise(22);
+  launchFirework({ delay: 650 });
+  launchFirework({ delay: 980 });
 
   [0.28, 0.5, 0.72].forEach((xRatio, index) => {
     window.setTimeout(() => {
@@ -1445,16 +1773,24 @@ function randomFromList(values) {
 
 function triggerMegaEffects() {
   triggerSuperEffects();
+  showMegaWord();
+  rainBlocks(26);
+  xpOrbRise(28);
   document.documentElement.animate(
     [
       { transform: "translate(0, 0)" },
-      { transform: "translate(4px, -3px)" },
-      { transform: "translate(-3px, 4px)" },
-      { transform: "translate(2px, 2px)" },
+      { transform: "translate(7px, -5px)" },
+      { transform: "translate(-6px, 6px)" },
+      { transform: "translate(5px, 4px)" },
+      { transform: "translate(-4px, -5px)" },
       { transform: "translate(0, 0)" },
     ],
-    { duration: 520, iterations: 2 },
+    { duration: 460, iterations: 3 },
   );
+
+  [320, 660, 1020, 1400].forEach((delay) => launchFirework({ delay }));
+  [380, 780, 1180].forEach((delay) => dropTnt({ delay }));
+  summonCreeper({ delay: 1000 });
 
   for (let wave = 0; wave < 6; wave += 1) {
     window.setTimeout(() => {
@@ -1473,6 +1809,21 @@ function triggerMegaEffects() {
       addSoundRing(Math.random() * window.innerWidth, Math.random() * window.innerHeight * 0.7, randomFromList(["#ff2f2f", "#20c5ba", "#ffd66b"]));
     }, wave * 260);
   }
+
+  // финальный залп по центру
+  window.setTimeout(() => {
+    addScreenFlash();
+    burstConfetti(240, {
+      x: window.innerWidth / 2,
+      y: window.innerHeight * 0.42,
+      spread: Math.PI * 2,
+      power: 17,
+      gravity: 0.06,
+      ttl: 3200,
+      minSize: 5,
+      maxSize: 18,
+    });
+  }, 1550);
 }
 
 function openRealityWarning() {
@@ -1486,7 +1837,7 @@ function closeRealityWarning() {
 function getHorrorAudio() {
   if (!state.horrorMusic) {
     state.horrorMusic = new Audio("assets/horror-music.mp3");
-    state.horrorMusic.loop = true;
+    state.horrorMusic.loop = false;
     state.horrorMusic.preload = "auto";
     state.horrorMusic.volume = 0.88;
   }
@@ -1560,12 +1911,6 @@ function playScreamerSound() {
   [scream, ...screamLayers].forEach((layer) => {
     layer.volume = 1;
     playAudio(layer);
-  });
-}
-
-function playScreamerSoundAfterFirstPaint() {
-  requestAnimationFrame(() => {
-    requestAnimationFrame(playScreamerSound);
   });
 }
 
@@ -1675,7 +2020,7 @@ function startScreamerPhase() {
   els.realityBreakFace.src = "assets/screamer 1.png";
   els.realityBreak.hidden = false;
   scheduleScreamerFaces();
-  playScreamerSoundAfterFirstPaint();
+  playScreamerSound();
   createBitStorm();
   triggerMegaEffects();
 
@@ -1742,6 +2087,8 @@ function stopRealityMeltdown() {
 setupConfetti();
 setupLaughAnimation();
 setupBackgroundMusic();
+setupSoundToggle();
+setupSplashText();
 
 els.startButtons.forEach((button) => {
   button.addEventListener("click", openQuizWindow);

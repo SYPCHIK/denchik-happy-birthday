@@ -86,7 +86,7 @@ body {
   font-family: "Pixelify Sans", "Press Start 2P", ui-sans-serif, system-ui, sans-serif;
   font-size: 17px;
   line-height: 1.55;
-  overflow-x: hidden;
+  overflow: hidden;
 }
 
 body.quiz-open {
@@ -111,12 +111,24 @@ button {
 
 .hero {
   position: relative;
-  min-height: 100svh;
+  height: 100svh;
+  min-height: 0;
   isolation: isolate;
   display: flex;
   align-items: center;
   padding: 104px clamp(20px, 5vw, 76px) 70px;
   overflow: hidden;
+}
+
+.hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -4;
+  background:
+    linear-gradient(180deg, rgba(11, 15, 21, 0.06), rgba(11, 15, 21, 0.28)),
+    url("assets/birthday-hero.jpg") center / cover no-repeat;
+  opacity: 0.72;
 }
 
 .hero__image,
@@ -128,7 +140,8 @@ button {
 .hero__image {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  object-position: center;
   z-index: -3;
   opacity: 1;
 }
@@ -236,8 +249,22 @@ h1 {
 .result-actions {
   display: flex;
   flex-wrap: wrap;
+  align-items: flex-start;
   gap: 12px;
   margin-top: 34px;
+}
+
+.hero__actions {
+  flex-direction: column;
+  gap: clamp(8px, 1.4vh, 12px);
+}
+
+.hero__effect-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: inherit;
+  width: min(760px, 100%);
 }
 
 .primary-button,
@@ -307,7 +334,9 @@ h1 {
 }
 
 .hero__gift-button {
-  flex-basis: min(380px, 100%);
+  flex: 0 0 auto;
+  margin-top: clamp(10px, 2.4vh, 24px);
+  width: min(380px, 100%);
 }
 
 .text-button {
@@ -875,14 +904,20 @@ h1 {
 }
 
 .gift-card__media {
-  background: #0b0f15;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1 / 0.76;
+  padding: clamp(10px, 2vw, 18px);
+  background:
+    radial-gradient(circle at 50% 42%, rgba(255, 214, 107, 0.12), transparent 48%),
+    #0b0f15;
 }
 
 .gift-card__media img {
   display: block;
   width: 100%;
-  aspect-ratio: 1 / 0.76;
-  object-fit: cover;
+  height: 100%;
+  object-fit: contain;
 }
 
 .gift-card__body {
@@ -1791,7 +1826,13 @@ h1 {
   }
 
   .hero__actions {
-    margin-top: 22px;
+    gap: 8px;
+    margin-top: 14px;
+  }
+
+  .hero__effect-actions {
+    flex-direction: column;
+    width: 100%;
   }
 
   .hero__actions,
@@ -1803,6 +1844,10 @@ h1 {
   .secondary-button,
   .danger-button {
     width: 100%;
+  }
+
+  .hero__gift-button {
+    margin-top: 8px;
   }
 
   .effect-button--mega {
@@ -1913,4 +1958,530 @@ h1 {
     animation-duration: 1ms !important;
     transition-duration: 1ms !important;
   }
+}
+
+.music-toggle {
+  position: fixed;
+  left: 14px;
+  bottom: 14px;
+  z-index: 95;
+  width: 54px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  font-size: 24px;
+  line-height: 1;
+  color: var(--text);
+  background: linear-gradient(180deg, #9c9c9c 0%, #828282 8%, #757575 50%, #686868 92%, #565656 100%);
+  border: 3px solid #14171c;
+  border-radius: 0;
+  box-shadow:
+    inset 3px 3px 0 rgba(255, 255, 255, 0.3),
+    inset -3px -3px 0 rgba(0, 0, 0, 0.42),
+    0 10px 26px rgba(0, 0, 0, 0.45);
+  image-rendering: pixelated;
+  transition: filter 0.12s ease, transform 0.08s ease;
+}
+
+.music-toggle:hover {
+  filter: brightness(1.14);
+}
+
+.music-toggle:active {
+  transform: translateY(2px);
+  box-shadow:
+    inset 3px 3px 0 rgba(0, 0, 0, 0.4),
+    inset -3px -3px 0 rgba(255, 255, 255, 0.16),
+    0 6px 18px rgba(0, 0, 0, 0.45);
+}
+
+.music-toggle--muted {
+  filter: saturate(0.3) brightness(0.82);
+}
+
+.music-toggle--muted:hover {
+  filter: saturate(0.3) brightness(0.96);
+}
+
+@media (max-width: 640px) {
+  .music-toggle {
+    left: 10px;
+    bottom: 10px;
+    width: 46px;
+    height: 46px;
+    font-size: 20px;
+  }
+}
+
+/* ============================
+   Minecraft-тема
+   ============================ */
+
+:root {
+  --mc-dirt: url("assets/mc-dirt.png");
+  --mc-grass: url("assets/mc-grass-side.png");
+  --mc-stone: url("assets/mc-stone.png");
+  --mc-bedrock: url("assets/mc-bedrock.png");
+}
+
+/* --- Кнопки как каменные кнопки Minecraft --- */
+
+.primary-button,
+.secondary-button,
+.danger-button,
+.ghost-button {
+  border-radius: 0;
+  border: 2px solid #14171c;
+  image-rendering: pixelated;
+  box-shadow:
+    inset 2px 2px 0 rgba(255, 255, 255, 0.32),
+    inset -2px -2px 0 rgba(0, 0, 0, 0.42),
+    0 8px 22px rgba(0, 0, 0, 0.32);
+}
+
+.secondary-button,
+.ghost-button {
+  background:
+    linear-gradient(180deg, rgba(20, 24, 31, 0.46), rgba(20, 24, 31, 0.62)),
+    var(--mc-stone);
+  background-size: auto, 32px 32px;
+  color: var(--text);
+}
+
+.primary-button {
+  background: linear-gradient(180deg, #ffe18f 0%, #f9cb52 52%, #e2aa3b 100%);
+  color: var(--ink);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.danger-button {
+  background: linear-gradient(180deg, #ff5b4e 0%, #e3271d 56%, #b51b14 100%);
+}
+
+.effect-button--super {
+  box-shadow:
+    inset 2px 2px 0 rgba(180, 255, 248, 0.3),
+    inset -2px -2px 0 rgba(0, 0, 0, 0.46),
+    0 8px 22px rgba(32, 197, 186, 0.18);
+}
+
+.effect-button--mega {
+  background:
+    linear-gradient(90deg, rgba(255, 107, 95, 0.3), rgba(32, 197, 186, 0.26)),
+    linear-gradient(180deg, rgba(20, 24, 31, 0.42), rgba(20, 24, 31, 0.56)),
+    var(--mc-stone);
+  background-size: auto, auto, 32px 32px;
+}
+
+.primary-button:active,
+.secondary-button:active,
+.danger-button:active,
+.ghost-button:active {
+  transform: translateY(2px);
+  box-shadow:
+    inset 2px 2px 0 rgba(0, 0, 0, 0.4),
+    inset -2px -2px 0 rgba(255, 255, 255, 0.14),
+    0 4px 12px rgba(0, 0, 0, 0.32);
+}
+
+.modal__close {
+  border-radius: 0;
+  border: 2px solid #14171c;
+  background:
+    linear-gradient(180deg, rgba(20, 24, 31, 0.42), rgba(20, 24, 31, 0.58)),
+    var(--mc-stone);
+  background-size: auto, 32px 32px;
+  image-rendering: pixelated;
+  box-shadow:
+    inset 2px 2px 0 rgba(255, 255, 255, 0.28),
+    inset -2px -2px 0 rgba(0, 0, 0, 0.4);
+}
+
+.music-toggle {
+  background:
+    linear-gradient(180deg, rgba(20, 24, 31, 0.18), rgba(20, 24, 31, 0.34)),
+    var(--mc-stone);
+  background-size: auto, 32px 32px;
+}
+
+/* --- Шапка теста как полоса земли, окна как инвентарь --- */
+
+.quiz-window__bar {
+  border-bottom: 3px solid #14171c;
+  background:
+    linear-gradient(180deg, rgba(16, 20, 27, 0.66), rgba(16, 20, 27, 0.78)),
+    var(--mc-dirt);
+  background-size: auto, 32px 32px;
+  image-rendering: pixelated;
+  backdrop-filter: none;
+}
+
+.modal__dialog,
+.reality-warning__dialog {
+  border-radius: 0;
+  border: 12px solid transparent;
+  border-image: var(--mc-dirt) 5 / 12px round;
+  image-rendering: pixelated;
+}
+
+.modal__dialog {
+  background: linear-gradient(145deg, #202834, #131820);
+  box-shadow:
+    0 0 0 3px #14171c,
+    inset 0 0 0 2px rgba(255, 255, 255, 0.07),
+    var(--shadow);
+}
+
+.reality-warning__dialog {
+  box-shadow:
+    0 0 0 3px #14171c,
+    inset 0 0 0 2px rgba(255, 47, 47, 0.25),
+    0 28px 90px rgba(255, 47, 47, 0.22),
+    var(--shadow);
+}
+
+/* --- Карточка подарка как тултип предмета --- */
+
+.gift-card {
+  border-radius: 0;
+  border: 2px solid #5b2bb0;
+  background: #150a1e;
+  box-shadow:
+    0 0 0 2px #100010,
+    0 0 30px rgba(91, 43, 176, 0.32),
+    var(--shadow);
+}
+
+.gift-card h3 {
+  color: #c79bff;
+  text-shadow: 0 0 14px rgba(151, 79, 255, 0.45);
+}
+
+.option-card {
+  border-radius: 0;
+}
+
+.laugh-card {
+  border-radius: 0;
+  border: 2px solid #14171c;
+  box-shadow:
+    0 0 0 2px rgba(255, 246, 233, 0.14),
+    0 26px 70px rgba(0, 0, 0, 0.42);
+}
+
+/* --- Прогресс теста как шкала опыта --- */
+
+.meter {
+  height: 12px;
+  border-radius: 0;
+  background: #161616;
+  box-shadow:
+    0 0 0 2px #14171c,
+    inset 0 2px 0 rgba(0, 0, 0, 0.6);
+}
+
+.meter span {
+  border-radius: 0;
+  background:
+    repeating-linear-gradient(90deg, transparent 0 10px, rgba(0, 0, 0, 0.26) 10px 12px),
+    linear-gradient(180deg, #b4f25a 0%, #80d62e 46%, #56a31a 100%);
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.34);
+}
+
+/* --- Splash-текст у заголовка --- */
+
+.hero h1 {
+  position: relative;
+}
+
+.splash {
+  position: absolute;
+  right: -10px;
+  top: -34px;
+  z-index: 2;
+  color: #ffff55;
+  font-family: "Press Start 2P", "Pixelify Sans", monospace;
+  font-size: clamp(0.55rem, 1.4vw, 0.8rem);
+  line-height: 1;
+  white-space: nowrap;
+  text-shadow: 2px 2px 0 #3f3f00;
+  transform: rotate(-12deg);
+  transform-origin: center;
+  pointer-events: none;
+  animation: splashPulse 0.9s ease-in-out infinite;
+}
+
+.splash:empty {
+  display: none;
+}
+
+@keyframes splashPulse {
+  0%,
+  100% {
+    transform: rotate(-12deg) scale(1);
+  }
+  50% {
+    transform: rotate(-12deg) scale(1.09);
+  }
+}
+
+/* --- Фон первого экрана: ослабленное затемнение, чтобы было видно сад --- */
+
+.hero__shade {
+  background:
+    linear-gradient(90deg, rgba(16, 20, 27, 0.84) 0%, rgba(16, 20, 27, 0.5) 47%, rgba(16, 20, 27, 0.14) 100%),
+    linear-gradient(180deg, rgba(16, 20, 27, 0.04) 0%, rgba(16, 20, 27, 0.72) 100%);
+}
+
+/* --- Десктоп: первый экран целиком без прокрутки --- */
+
+@media (min-width: 901px) and (min-height: 600px) {
+  .hero {
+    height: 100svh;
+    min-height: 0;
+    padding: clamp(48px, 7vh, 92px) clamp(20px, 5vw, 76px) clamp(40px, 6vh, 70px);
+  }
+
+  .hero__inner {
+    min-height: 0;
+    height: 100%;
+  }
+
+  .hero h1 {
+    font-size: clamp(1.6rem, 3.6vh + 1vw, 3.4rem);
+  }
+
+  .hero__lead {
+    margin-top: clamp(8px, 1.6vh, 18px);
+    font-size: clamp(0.92rem, 1.7vh, 1.24rem);
+  }
+
+  .hero__lead--compact {
+    font-size: clamp(0.88rem, 1.55vh, 1.12rem);
+  }
+
+  .hero__actions {
+    margin-top: clamp(12px, 2.6vh, 34px);
+  }
+
+  /* фотка полного размера; сжимается только если экран слишком низкий и она бы не влезла */
+  .laugh-stage {
+    width: min(390px, 32vw, calc((100svh - 120px) * 0.5628));
+  }
+}
+
+/* --- Фейерверки --- */
+
+.firework-rocket {
+  position: fixed;
+  left: var(--x);
+  top: 100svh;
+  z-index: 37;
+  width: 4px;
+  height: 18px;
+  background: linear-gradient(180deg, #fff6e9, var(--color), transparent);
+  box-shadow: 0 0 12px var(--color);
+  pointer-events: none;
+  animation: rocketUp var(--duration) cubic-bezier(0.22, 0.8, 0.45, 1) forwards;
+}
+
+@keyframes rocketUp {
+  0% {
+    transform: translateY(0) scaleY(1);
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(var(--ty)) scaleY(0.66);
+    opacity: 0.9;
+  }
+}
+
+/* --- Гигантская надпись для мега-эффектов --- */
+
+.mega-word {
+  position: fixed;
+  left: 50%;
+  top: 38%;
+  z-index: 50;
+  font-family: "Press Start 2P", "Pixelify Sans", monospace;
+  font-size: clamp(1.5rem, 6vw, 4.2rem);
+  color: var(--lemon);
+  white-space: nowrap;
+  text-shadow:
+    0 0 28px rgba(255, 214, 107, 0.85),
+    4px 4px 0 #14171c;
+  pointer-events: none;
+  animation: megaWord 1500ms cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
+}
+
+@keyframes megaWord {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.2) rotate(-8deg);
+  }
+  18% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.18) rotate(2deg);
+  }
+  30% {
+    transform: translate(-50%, -50%) scale(1) rotate(0deg);
+  }
+  72% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.05);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.32);
+  }
+}
+
+/* --- Частицы блоков при выборе подарка --- */
+
+.block-particle {
+  position: fixed;
+  left: var(--x);
+  top: var(--y);
+  z-index: 80;
+  width: var(--size);
+  height: var(--size);
+  background: var(--mc-dirt) center / cover;
+  image-rendering: pixelated;
+  pointer-events: none;
+  animation: blockFly var(--duration) cubic-bezier(0.24, 0.4, 0.6, 1) forwards;
+}
+
+@keyframes blockFly {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  45% {
+    opacity: 1;
+    transform: translate(calc(-50% + var(--mx)), calc(-50% + var(--my))) rotate(calc(var(--rot) * 0.5));
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) rotate(var(--rot));
+  }
+}
+
+/* --- TNT и крипер для мега-эффектов --- */
+
+.tnt-block {
+  position: fixed;
+  left: var(--x);
+  top: -48px;
+  z-index: 81;
+  width: var(--size);
+  height: var(--size);
+  background: url("assets/mc-tnt.png") center / cover;
+  image-rendering: pixelated;
+  pointer-events: none;
+  animation:
+    tntFall var(--fall) cubic-bezier(0.3, 0, 0.8, 0.6) forwards,
+    tntBlink 230ms steps(2, end) infinite;
+}
+
+@keyframes tntFall {
+  to {
+    transform: translateY(var(--dy)) rotate(var(--rot));
+  }
+}
+
+@keyframes tntBlink {
+  50% {
+    filter: brightness(2.6) saturate(0.2);
+  }
+}
+
+.creeper-face {
+  position: fixed;
+  left: var(--x);
+  top: var(--y);
+  z-index: 81;
+  width: 88px;
+  height: 88px;
+  background: url("assets/mc-creeper.png") center / cover;
+  image-rendering: pixelated;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  animation: creeperPrime 1100ms steps(1, end) forwards;
+}
+
+@keyframes creeperPrime {
+  0% {
+    opacity: 0;
+  }
+  8% {
+    opacity: 1;
+    filter: none;
+  }
+  30% {
+    filter: brightness(2.4) saturate(0.25);
+  }
+  45% {
+    filter: none;
+  }
+  60% {
+    filter: brightness(2.7) saturate(0.2);
+  }
+  75% {
+    filter: none;
+  }
+  90% {
+    filter: brightness(3) saturate(0.1);
+  }
+  100% {
+    opacity: 1;
+    filter: brightness(3) saturate(0.1);
+  }
+}
+
+.boom-puff {
+  position: fixed;
+  left: var(--x);
+  top: var(--y);
+  z-index: 82;
+  width: var(--size);
+  height: var(--size);
+  background: var(--color);
+  image-rendering: pixelated;
+  pointer-events: none;
+  animation: puffOut var(--duration) ease-out forwards;
+}
+
+@keyframes puffOut {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(0.35);
+  }
+  70% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1.15);
+  }
+}
+
+/* --- Фон финального подарка (можно заменить своей картинкой) --- */
+
+.result-section {
+  background:
+    linear-gradient(90deg, rgba(13, 17, 23, 0.88) 0%, rgba(13, 17, 23, 0.55) 55%, rgba(13, 17, 23, 0.3) 100%),
+    url("assets/final page.jpg") center / cover no-repeat,
+    linear-gradient(90deg, rgba(255, 107, 95, 0.12), transparent 42%),
+    linear-gradient(180deg, rgba(32, 197, 186, 0.08), rgba(255, 214, 107, 0.06));
+}
+
+.friendship-finale .modal__backdrop {
+  background:
+    linear-gradient(180deg, rgba(8, 10, 14, 0.72), rgba(8, 10, 14, 0.84)),
+    url("assets/final page.jpg") center / cover no-repeat,
+    rgba(8, 10, 14, 0.86);
 }
