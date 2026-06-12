@@ -1,3 +1,57 @@
+@font-face {
+  font-family: "Press Start 2P";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("assets/fonts/press-start-2p-cyrillic-400.woff2") format("woff2");
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+
+@font-face {
+  font-family: "Press Start 2P";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("assets/fonts/press-start-2p-latin-400.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2212;
+}
+
+@font-face {
+  font-family: "Pixelify Sans";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("assets/fonts/pixelify-sans-cyrillic-400.woff2") format("woff2");
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+
+@font-face {
+  font-family: "Pixelify Sans";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("assets/fonts/pixelify-sans-latin-400.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2212;
+}
+
+@font-face {
+  font-family: "Pixelify Sans";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("assets/fonts/pixelify-sans-cyrillic-700.woff2") format("woff2");
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+
+@font-face {
+  font-family: "Pixelify Sans";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("assets/fonts/pixelify-sans-latin-700.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2212;
+}
+
 :root {
   color-scheme: dark;
   --bg: #10141b;
@@ -29,8 +83,9 @@ body {
     radial-gradient(circle at top left, rgba(32, 197, 186, 0.18), transparent 34rem),
     linear-gradient(180deg, #10141b 0%, #151a23 54%, #10141b 100%);
   color: var(--text);
-  font-family:
-    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: "Pixelify Sans", "Press Start 2P", ui-sans-serif, system-ui, sans-serif;
+  font-size: 17px;
+  line-height: 1.55;
   overflow-x: hidden;
 }
 
@@ -132,9 +187,10 @@ button {
 .eyebrow {
   margin: 0 0 14px;
   color: var(--lemon);
-  font-size: 0.76rem;
-  font-weight: 800;
-  letter-spacing: 0.14em;
+  font-family: "Press Start 2P", "Pixelify Sans", monospace;
+  font-size: 0.6rem;
+  font-weight: 400;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
@@ -149,12 +205,14 @@ h1,
 h2,
 h3 {
   margin: 0;
-  line-height: 1.02;
+  font-family: "Press Start 2P", "Pixelify Sans", monospace;
+  font-weight: 400;
+  line-height: 1.2;
 }
 
 h1 {
   max-width: 710px;
-  font-size: clamp(3.15rem, 7vw, 6.2rem);
+  font-size: clamp(1.85rem, 4.4vw, 3.4rem);
   letter-spacing: 0;
   text-shadow: 0 3px 18px rgba(0, 0, 0, 0.55);
 }
@@ -190,8 +248,11 @@ h1 {
   min-height: 44px;
   border: 0;
   border-radius: 8px;
-  padding: 0 18px;
-  font-weight: 800;
+  padding: 12px 18px;
+  font-family: "Press Start 2P", "Pixelify Sans", monospace;
+  font-size: 0.68rem;
+  font-weight: 400;
+  line-height: 1.45;
   transition:
     transform 160ms ease,
     border-color 160ms ease,
@@ -236,12 +297,17 @@ h1 {
 .effect-button--mega {
   flex-basis: min(650px, 100%);
   min-height: 54px;
+  font-size: 0.6rem;
   border-color: rgba(255, 214, 107, 0.68);
   background:
     linear-gradient(90deg, rgba(255, 107, 95, 0.22), rgba(32, 197, 186, 0.2)),
     rgba(255, 246, 233, 0.08);
   color: var(--lemon);
   text-align: left;
+}
+
+.hero__gift-button {
+  flex-basis: min(380px, 100%);
 }
 
 .text-button {
@@ -523,6 +589,7 @@ h1 {
   color: var(--text);
   text-align: left;
   box-shadow: none;
+  touch-action: manipulation;
   transition:
     transform 160ms ease,
     border-color 160ms ease,
@@ -532,6 +599,12 @@ h1 {
 .gift-duel-card:hover {
   transform: none;
   box-shadow: 0 0 0 1px rgba(255, 214, 107, 0.5) inset;
+}
+
+.gift-duel-card--chosen {
+  box-shadow:
+    0 0 0 2px rgba(255, 214, 107, 0.92) inset,
+    0 0 46px rgba(255, 214, 107, 0.28) inset;
 }
 
 .gift-duel-card__media {
@@ -671,7 +744,7 @@ h1 {
 }
 
 .result-copy h2 {
-  font-size: clamp(2rem, 4vw, 4rem);
+  font-size: clamp(1.3rem, 2.8vw, 2.4rem);
   letter-spacing: 0;
 }
 
@@ -826,7 +899,7 @@ h1 {
 }
 
 .gift-card h3 {
-  font-size: clamp(1.7rem, 3vw, 2.4rem);
+  font-size: clamp(1rem, 1.9vw, 1.5rem);
 }
 
 .gift-card__body p:last-child {
@@ -904,7 +977,7 @@ h1 {
 }
 
 .reality-warning__dialog h2 {
-  font-size: clamp(2rem, 6vw, 4rem);
+  font-size: clamp(1.15rem, 3.2vw, 2rem);
 }
 
 .reality-warning__dialog p:not(.eyebrow) {
@@ -1007,9 +1080,10 @@ h1 {
   z-index: 5;
   width: min(90vw, 760px);
   color: rgba(255, 246, 233, 0.86);
-  font-size: clamp(1.4rem, 8vw, 5.4rem);
-  font-weight: 950;
-  line-height: 0.92;
+  font-family: "Press Start 2P", monospace;
+  font-size: clamp(1.05rem, 4.4vw, 3rem);
+  font-weight: 400;
+  line-height: 1.15;
   text-align: center;
   text-transform: uppercase;
   text-shadow:
@@ -1078,9 +1152,10 @@ h1 {
   z-index: 4;
   width: min(94vw, 940px);
   color: #fff6e9;
-  font-size: clamp(2.4rem, 13vw, 8rem);
-  font-weight: 1000;
-  line-height: 0.86;
+  font-family: "Press Start 2P", monospace;
+  font-size: clamp(1.5rem, 7vw, 4.4rem);
+  font-weight: 400;
+  line-height: 1.05;
   text-align: center;
   text-shadow:
     5px 0 #ff2f2f,
@@ -1102,7 +1177,7 @@ h1 {
   left: var(--x);
   top: var(--y);
   color: var(--color);
-  font-family: "Courier New", monospace;
+  font-family: "Press Start 2P", "Courier New", monospace;
   font-size: var(--size);
   font-weight: 900;
   text-shadow: 0 0 12px currentColor;
@@ -1131,8 +1206,8 @@ h1 {
 .round-announcer h2 {
   max-width: 900px;
   color: var(--text);
-  font-size: clamp(2.4rem, 10vw, 7rem);
-  line-height: 0.92;
+  font-size: clamp(1.35rem, 5vw, 3.4rem);
+  line-height: 1.18;
   text-shadow: 0 0 30px rgba(255, 214, 107, 0.34);
 }
 
@@ -1154,12 +1229,157 @@ h1 {
 }
 
 .modal__dialog h2 {
-  font-size: clamp(2rem, 5vw, 3.4rem);
+  font-size: clamp(1.15rem, 3vw, 1.9rem);
 }
 
 .modal__dialog p:not(.eyebrow) {
   color: rgba(255, 246, 233, 0.8);
   line-height: 1.65;
+}
+
+.friendship-finale[hidden] {
+  display: none;
+}
+
+.friendship-finale {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  overflow: hidden;
+}
+
+.friendship-finale .modal__backdrop {
+  background: rgba(8, 10, 14, 0.86);
+}
+
+.friendship-finale__stage {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(10px, 1.7vh, 18px);
+  width: min(1100px, 100%);
+  max-height: calc(100svh - 36px);
+  text-align: center;
+}
+
+.friendship-finale__message {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.38em 0.48em;
+  width: min(980px, 98%);
+  color: var(--lemon);
+  font-family: "Press Start 2P", "Pixelify Sans", monospace;
+  font-size: clamp(0.78rem, 2.05vw, 1.32rem);
+  line-height: 1.42;
+  margin-top: clamp(-10px, -1vh, 0px);
+  text-shadow:
+    0 0 22px rgba(255, 214, 107, 0.5),
+    0 4px 0 rgba(0, 0, 0, 0.65);
+}
+
+.friendship-word {
+  display: inline-block;
+  opacity: 0;
+  animation: wordFlyIn 640ms cubic-bezier(0.18, 0.89, 0.32, 1.32) both;
+}
+
+.friendship-finale__photos,
+.friendship-finale__photo {
+  border-radius: 6px;
+}
+
+.friendship-finale__photo {
+  width: min(48vw, 620px);
+  max-height: 42vh;
+  object-fit: cover;
+  border: 3px solid rgba(255, 246, 233, 0.4);
+  box-shadow: 0 26px 80px rgba(0, 0, 0, 0.6);
+  opacity: 0;
+  image-rendering: auto;
+}
+
+.friendship-finale__photo--left {
+  align-self: flex-start;
+  transform: rotate(-5deg);
+  animation: photoPopLeft 780ms cubic-bezier(0.18, 0.89, 0.32, 1.26) 500ms both;
+}
+
+.friendship-finale__photo--right {
+  align-self: flex-end;
+  margin-top: clamp(-150px, -11vh, -36px);
+  transform: rotate(4.5deg);
+  animation: photoPopRight 780ms cubic-bezier(0.18, 0.89, 0.32, 1.26) 860ms both;
+}
+
+.pixel-smiley {
+  width: clamp(64px, 9vw, 104px);
+  height: auto;
+  margin-top: clamp(-34px, -2.2vh, -8px);
+  filter: drop-shadow(0 0 18px rgba(255, 214, 107, 0.55));
+  opacity: 0;
+  animation:
+    smileyIn 560ms cubic-bezier(0.18, 0.89, 0.32, 1.4) 2300ms both,
+    smileyBob 1.6s ease-in-out 2900ms infinite;
+}
+
+@keyframes wordFlyIn {
+  0% {
+    opacity: 0;
+    transform: translateY(60vh) scale(0.2) rotate(-14deg);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1) rotate(0deg);
+  }
+}
+
+@keyframes photoPopLeft {
+  0% {
+    opacity: 0;
+    transform: translate(30vw, 70vh) scale(0.2) rotate(-40deg);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1) rotate(-5deg);
+  }
+}
+
+@keyframes photoPopRight {
+  0% {
+    opacity: 0;
+    transform: translate(-30vw, 70vh) scale(0.2) rotate(38deg);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1) rotate(4.5deg);
+  }
+}
+
+@keyframes smileyIn {
+  0% {
+    opacity: 0;
+    transform: translateY(50px) scale(0.2);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes smileyBob {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-3deg);
+  }
+  50% {
+    transform: translateY(-12px) rotate(3deg);
+  }
 }
 
 .modal__close {
@@ -1479,6 +1699,21 @@ h1 {
     grid-template-columns: 1fr;
   }
 
+  .friendship-finale__photo {
+    width: min(78vw, 430px);
+    max-height: 27vh;
+  }
+
+  .friendship-finale__photo--right {
+    margin-top: -5vh;
+  }
+
+  .friendship-finale__message {
+    width: min(96vw, 720px);
+    font-size: clamp(0.62rem, 2.85vw, 0.9rem);
+    line-height: 1.45;
+  }
+
   .options-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1540,7 +1775,7 @@ h1 {
   }
 
   h1 {
-    font-size: clamp(2.35rem, 12vw, 3.45rem);
+    font-size: clamp(1.45rem, 7vw, 2.1rem);
   }
 
   .hero__lead {
@@ -1572,8 +1807,8 @@ h1 {
 
   .effect-button--mega {
     min-height: 62px;
-    font-size: 0.82rem;
-    line-height: 1.18;
+    font-size: 0.56rem;
+    line-height: 1.4;
     text-align: center;
   }
 
@@ -1606,7 +1841,7 @@ h1 {
   }
 
   .result-copy h2 {
-    font-size: clamp(1.65rem, 9vw, 2.35rem);
+    font-size: clamp(1.05rem, 5.5vw, 1.5rem);
   }
 
   .options-grid {

@@ -113,6 +113,8 @@ const tournamentRounds = [
   },
 ];
 
+const TOURNAMENT_CHOICE_ADVANCE_DELAY = 60;
+
 const state = {
   roundIndex: 0,
   matchIndex: 0,
@@ -125,8 +127,20 @@ const state = {
   horrorMusic: null,
   horrorScream: null,
   horrorScreamLayers: [],
-  effectSounds: {},
+  purpleScreamerSound: null,
   effectAudioContext: null,
+  tournamentClickSounds: [],
+  tournamentClickSoundIndex: 0,
+  tournamentClickSoundPrimed: false,
+  partyPopperSound: null,
+  megaExplosionSound: null,
+  openGiftSound: null,
+  roundAnnounceSound: null,
+  mainTheme: null,
+  finalTheme: null,
+  activeTheme: "main",
+  musicStarted: false,
+  themeFadeTimer: null,
 };
 
 const els = {
@@ -167,6 +181,10 @@ const els = {
   modal: document.querySelector("#giftModal"),
   modalText: document.querySelector("#modalText"),
   closeModalButtons: document.querySelectorAll("[data-close-modal]"),
+  claimGiftButton: document.querySelector("#claimGiftButton"),
+  friendshipFinale: document.querySelector("#friendshipFinale"),
+  friendshipMessage: document.querySelector("#friendshipMessage"),
+  closeFinaleButtons: document.querySelectorAll("[data-close-finale]"),
   confettiCanvas: document.querySelector("#confetti"),
 };
 
@@ -284,7 +302,28 @@ function renderTournamentMatch() {
     if (gift.image) {
       card.querySelector(".gift-duel-card__media").append(createGiftImage(gift, "gift-duel-card__image"));
     }
-    card.addEventListener("click", () => selectTournamentWinner(giftKey));
+
+    let isChosen = false;
+    const chooseGift = (event) => {
+      event?.preventDefault();
+
+      if (isChosen) {
+        return;
+      }
+
+      isChosen = true;
+      card.classList.add("gift-duel-card--chosen");
+      playTournamentClickSound();
+      window.setTimeout(() => selectTournamentWinner(giftKey, { playSound: false }), TOURNAMENT_CHOICE_ADVANCE_DELAY);
+    };
+
+    card.addEventListener("pointerdown", chooseGift);
+    card.addEventListener("click", chooseGift);
+    card.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        chooseGift(event);
+      }
+    });
     els.optionsGrid.append(card);
   });
 
@@ -294,6 +333,7 @@ function announceRound(label, title, onDone) {
   els.roundAnnouncerLabel.textContent = label;
   els.roundAnnouncerTitle.textContent = title;
   els.roundAnnouncer.hidden = false;
+  playRoundAnnounceSound();
   triggerSpecialEffects();
 
   window.setTimeout(() => {
@@ -302,7 +342,11 @@ function announceRound(label, title, onDone) {
   }, 1850);
 }
 
-function selectTournamentWinner(giftKey) {
+function selectTournamentWinner(giftKey, { playSound = true } = {}) {
+  if (playSound) {
+    playTournamentClickSound();
+  }
+
   const round = getCurrentRound();
   state.history.push({
     roundIndex: state.roundIndex,
@@ -367,10 +411,12 @@ function showResult(resultKey = state.winners.final[0]) {
   els.quizSection.hidden = true;
   els.resultSection.hidden = false;
   els.quizWindow.scrollTo({ top: 0, behavior: "smooth" });
+  playTheme("final", { restart: true });
   burstConfetti(120);
 }
 
 function openQuizWindow() {
+  primeTournamentClickSound();
   els.quizWindow.hidden = false;
   document.body.classList.add("quiz-open");
   els.quizWindow.scrollTo({ top: 0 });
@@ -381,9 +427,11 @@ function openQuizWindow() {
 function closeQuizWindow() {
   els.quizWindow.hidden = true;
   document.body.classList.remove("quiz-open");
+  playTheme("main");
 }
 
 function restartQuiz() {
+  playTheme("main");
   state.roundIndex = 0;
   state.matchIndex = 0;
   state.winners = createEmptyWinners();
@@ -408,6 +456,7 @@ function goBack() {
 }
 
 function openModal() {
+  playOpenGiftSound();
   const gift = gifts[state.resultKey];
   els.modalText.textContent = gift.reveal;
   els.modal.hidden = false;
@@ -416,6 +465,40 @@ function openModal() {
 
 function closeModal() {
   els.modal.hidden = true;
+}
+
+const FRIENDSHIP_MESSAGE =
+  "Не важно, что ты выбрал, ведь главный подарок — это наша дружба сквозь века";
+
+function openFriendshipFinale() {
+  closeModal();
+  els.friendshipMessage.innerHTML = "";
+
+  FRIENDSHIP_MESSAGE.split(" ").forEach((word, index) => {
+    const span = document.createElement("span");
+    span.className = "friendship-word";
+    span.textContent = word;
+    span.style.animationDelay = `${260 + index * 140}ms`;
+    els.friendshipMessage.append(span);
+
+    const wordAt = 0.26 + index * 0.14;
+    playTextBlip(wordAt, 0.92 + Math.random() * 0.16);
+
+    if (word.length > 5) {
+      playTextBlip(wordAt + 0.07, 0.92 + Math.random() * 0.16);
+    }
+  });
+
+  els.friendshipFinale.hidden = false;
+  playPartyPopper(0, 1.1);
+  playPartyHorn(0.12, 1);
+  playConfettiRustle(0.18, 1.4);
+  burstConfetti(150, { y: window.innerHeight * 0.7, power: 13 });
+  window.setTimeout(() => burstConfetti(90, { y: window.innerHeight * 0.3 }), 900);
+}
+
+function closeFriendshipFinale() {
+  els.friendshipFinale.hidden = true;
 }
 
 function setupLaughAnimation() {
@@ -673,28 +756,86 @@ function addSoundRing(x = window.innerWidth / 2, y = window.innerHeight / 2, col
   ring.addEventListener("animationend", () => ring.remove(), { once: true });
 }
 
-function getEffectSound(name) {
-  const sounds = {
-    confetti: { src: "assets/sfx-confetti.ogg", volume: 0.75 },
-    super: { src: "assets/sfx-super-effects.ogg", volume: 0.82 },
-    mega: { src: "assets/sfx-mega-effects.ogg", volume: 0.9 },
-  };
-
-  if (!state.effectSounds[name]) {
-    const config = sounds[name];
-    const audio = new Audio(config.src);
-    audio.preload = "auto";
-    audio.volume = config.volume;
-    state.effectSounds[name] = audio;
+function getTournamentClickSounds() {
+  if (state.tournamentClickSounds.length === 0) {
+    state.tournamentClickSounds = Array.from({ length: 5 }, () => {
+      const audio = new Audio("assets/minecraft_click.mp3");
+      audio.preload = "auto";
+      audio.volume = 0.95;
+      audio.load();
+      return audio;
+    });
   }
 
-  return state.effectSounds[name];
+  return state.tournamentClickSounds;
 }
 
-function playEffectSound(name) {
-  const baseAudio = getEffectSound(name);
-  const audio = baseAudio.cloneNode();
-  audio.volume = baseAudio.volume;
+function primeTournamentClickSound() {
+  getTournamentClickSounds().forEach((audio) => {
+    audio.load();
+
+    try {
+      audio.currentTime = 0;
+    } catch {}
+  });
+
+  if (state.tournamentClickSoundPrimed) {
+    return;
+  }
+
+  state.tournamentClickSoundPrimed = true;
+  getTournamentClickSounds().forEach((audio) => {
+    const previousMuted = audio.muted;
+    const previousVolume = audio.volume;
+    audio.muted = true;
+    audio.volume = 0;
+
+    const resetAudio = () => {
+      audio.pause();
+
+      try {
+        audio.currentTime = 0;
+      } catch {}
+
+      audio.muted = previousMuted;
+      audio.volume = previousVolume;
+    };
+
+    const playAttempt = audio.play();
+
+    if (playAttempt?.then) {
+      playAttempt.then(resetAudio).catch(resetAudio);
+      return;
+    }
+
+    resetAudio();
+  });
+}
+
+function getPartyPopperSound() {
+  if (!state.partyPopperSound) {
+    state.partyPopperSound = new Audio("assets/хлопушка.mp3");
+    state.partyPopperSound.preload = "auto";
+    state.partyPopperSound.volume = 1;
+    state.partyPopperSound.load();
+  }
+
+  return state.partyPopperSound;
+}
+
+function primePartyPopperSound() {
+  const audio = getPartyPopperSound();
+  audio.load();
+
+  try {
+    audio.currentTime = 0;
+  } catch {}
+}
+
+function playTournamentClickSound() {
+  const sounds = getTournamentClickSounds();
+  const audio = sounds[state.tournamentClickSoundIndex % sounds.length];
+  state.tournamentClickSoundIndex += 1;
 
   try {
     audio.currentTime = 0;
@@ -705,8 +846,196 @@ function playEffectSound(name) {
   if (playAttempt?.catch) {
     playAttempt.catch(() => {});
   }
+}
 
-  audio.addEventListener("ended", () => audio.remove(), { once: true });
+function getMegaExplosionSound() {
+  if (!state.megaExplosionSound) {
+    state.megaExplosionSound = new Audio("assets/minecraft-explode1.mp3");
+    state.megaExplosionSound.preload = "auto";
+    state.megaExplosionSound.volume = 1;
+  }
+
+  return state.megaExplosionSound;
+}
+
+function playMegaExplosionSample(delay = 0, volume = 1) {
+  window.setTimeout(() => {
+    const baseAudio = getMegaExplosionSound();
+    const audio = baseAudio.cloneNode();
+    audio.volume = volume;
+
+    try {
+      audio.currentTime = 0;
+    } catch {}
+
+    const playAttempt = audio.play();
+
+    if (playAttempt?.catch) {
+      playAttempt.catch(() => {});
+    }
+
+    audio.addEventListener("ended", () => audio.remove(), { once: true });
+  }, delay);
+}
+
+function playMegaExplosionStack() {
+  [0, 90, 210, 360, 540].forEach((delay, index) => {
+    playMegaExplosionSample(delay, Math.max(0.72, 1 - index * 0.04));
+  });
+}
+
+function getOpenGiftSound() {
+  if (!state.openGiftSound) {
+    state.openGiftSound = new Audio("assets/открыть подарок.mp3");
+    state.openGiftSound.preload = "auto";
+    state.openGiftSound.volume = 0.95;
+  }
+
+  return state.openGiftSound;
+}
+
+function playOpenGiftSound() {
+  const audio = getOpenGiftSound();
+
+  try {
+    audio.currentTime = 0;
+  } catch {}
+
+  const playAttempt = audio.play();
+
+  if (playAttempt?.catch) {
+    playAttempt.catch(() => {});
+  }
+}
+
+function getRoundAnnounceSound() {
+  if (!state.roundAnnounceSound) {
+    state.roundAnnounceSound = new Audio("assets/круг турнира.mp3");
+    state.roundAnnounceSound.preload = "auto";
+    state.roundAnnounceSound.volume = 0.95;
+  }
+
+  return state.roundAnnounceSound;
+}
+
+function playRoundAnnounceSound() {
+  const audio = getRoundAnnounceSound();
+
+  try {
+    audio.currentTime = 0;
+  } catch {}
+
+  const playAttempt = audio.play();
+
+  if (playAttempt?.catch) {
+    playAttempt.catch(() => {});
+  }
+}
+
+const MAIN_THEME_VOLUME = 0.55;
+const FINAL_THEME_VOLUME = 0.68;
+
+function getMainTheme() {
+  if (!state.mainTheme) {
+    state.mainTheme = new Audio("assets/main-theme.mp3");
+    state.mainTheme.loop = true;
+    state.mainTheme.preload = "auto";
+    state.mainTheme.volume = MAIN_THEME_VOLUME;
+  }
+
+  return state.mainTheme;
+}
+
+function getFinalTheme() {
+  if (!state.finalTheme) {
+    state.finalTheme = new Audio("assets/final-gift-theme.mp3");
+    state.finalTheme.loop = true;
+    state.finalTheme.preload = "auto";
+    state.finalTheme.volume = FINAL_THEME_VOLUME;
+  }
+
+  return state.finalTheme;
+}
+
+function clearThemeFade() {
+  if (state.themeFadeTimer) {
+    window.clearInterval(state.themeFadeTimer);
+    state.themeFadeTimer = null;
+  }
+}
+
+function playTheme(which, { restart = false } = {}) {
+  state.activeTheme = which;
+
+  if (!state.musicStarted) {
+    return;
+  }
+
+  clearThemeFade();
+  const active = which === "final" ? getFinalTheme() : getMainTheme();
+  const inactive = which === "final" ? getMainTheme() : getFinalTheme();
+  inactive.pause();
+
+  if (restart) {
+    try {
+      active.currentTime = 0;
+    } catch {}
+  }
+
+  active.volume = which === "final" ? FINAL_THEME_VOLUME : MAIN_THEME_VOLUME;
+  const playAttempt = active.play();
+
+  if (playAttempt?.catch) {
+    playAttempt.catch(() => {});
+  }
+}
+
+function duckThemeForScreamer() {
+  clearThemeFade();
+  getMainTheme().pause();
+  getFinalTheme().pause();
+}
+
+function restoreThemeAfterScreamer() {
+  if (!state.musicStarted) {
+    return;
+  }
+
+  clearThemeFade();
+  const active = state.activeTheme === "final" ? getFinalTheme() : getMainTheme();
+  const target = state.activeTheme === "final" ? FINAL_THEME_VOLUME : MAIN_THEME_VOLUME;
+  active.volume = 0;
+  const playAttempt = active.play();
+
+  if (playAttempt?.catch) {
+    playAttempt.catch(() => {});
+  }
+
+  state.themeFadeTimer = window.setInterval(() => {
+    const next = Math.min(target, active.volume + target / 42);
+    active.volume = next;
+
+    if (next >= target) {
+      clearThemeFade();
+    }
+  }, 120);
+}
+
+function setupBackgroundMusic() {
+  const start = () => {
+    if (state.musicStarted) {
+      return;
+    }
+
+    state.musicStarted = true;
+    primeTournamentClickSound();
+    primePartyPopperSound();
+    playTheme(state.activeTheme);
+  };
+
+  ["pointerdown", "keydown", "touchstart"].forEach((eventName) => {
+    document.addEventListener(eventName, start, { once: true });
+  });
 }
 
 function getEffectAudioContext() {
@@ -805,7 +1134,125 @@ function playExplosion(delay = 0, power = 1) {
   boom.stop(startAt + 0.7);
 }
 
-function playApplause(delay = 0, intensity = 1) {
+function playPartyPopper(delay = 0, power = 1) {
+  window.setTimeout(() => {
+    const baseAudio = getPartyPopperSound();
+    const audio = baseAudio.cloneNode();
+    audio.volume = Math.min(1, 0.9 * power);
+
+    try {
+      audio.currentTime = 0;
+    } catch {}
+
+    const playAttempt = audio.play();
+
+    if (playAttempt?.catch) {
+      playAttempt.catch(() => {});
+    }
+
+    audio.addEventListener("ended", () => audio.remove(), { once: true });
+  }, delay * 1000);
+}
+
+function playPartyHorn(delay = 0, intensity = 1) {
+  const ctx = getEffectAudioContext();
+
+  if (!ctx) {
+    return;
+  }
+
+  const startAt = ctx.currentTime + delay;
+  const duration = 0.62 + Math.random() * 0.2;
+  const base = 392 + Math.random() * 56;
+  const lfo = ctx.createOscillator();
+  const lfoGain = ctx.createGain();
+  const filter = ctx.createBiquadFilter();
+
+  lfo.type = "sine";
+  lfo.frequency.setValueAtTime(6.5, startAt);
+  lfoGain.gain.setValueAtTime(base * 0.018, startAt);
+  lfo.connect(lfoGain);
+
+  filter.type = "lowpass";
+  filter.frequency.setValueAtTime(2600, startAt);
+  filter.frequency.linearRampToValueAtTime(1600, startAt + duration);
+  filter.connect(ctx.destination);
+
+  [
+    [1, 0.26, "triangle"],
+    [2, 0.1, "triangle"],
+    [3, 0.045, "sine"],
+  ].forEach(([harmonic, level, type]) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = type;
+    osc.frequency.setValueAtTime(base * harmonic * 0.94, startAt);
+    osc.frequency.exponentialRampToValueAtTime(base * harmonic, startAt + 0.12);
+    osc.frequency.exponentialRampToValueAtTime(base * harmonic * 1.25, startAt + duration - 0.08);
+    lfoGain.connect(osc.frequency);
+    gain.gain.setValueAtTime(0.001, startAt);
+    gain.gain.linearRampToValueAtTime(level * intensity, startAt + 0.09);
+    gain.gain.setValueAtTime(level * intensity, startAt + duration - 0.18);
+    gain.gain.exponentialRampToValueAtTime(0.001, startAt + duration);
+    osc.connect(gain);
+    gain.connect(filter);
+    osc.start(startAt);
+    osc.stop(startAt + duration + 0.05);
+  });
+
+  lfo.start(startAt);
+  lfo.stop(startAt + duration + 0.05);
+}
+
+function playTextBlip(delay = 0, pitch = 1) {
+  const ctx = getEffectAudioContext();
+
+  if (!ctx) {
+    return;
+  }
+
+  const startAt = ctx.currentTime + delay;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  const filter = ctx.createBiquadFilter();
+
+  osc.type = "square";
+  osc.frequency.setValueAtTime(540 * pitch, startAt);
+  osc.frequency.exponentialRampToValueAtTime(430 * pitch, startAt + 0.05);
+  filter.type = "lowpass";
+  filter.frequency.setValueAtTime(2100, startAt);
+  gain.gain.setValueAtTime(0.001, startAt);
+  gain.gain.exponentialRampToValueAtTime(0.15, startAt + 0.006);
+  gain.gain.exponentialRampToValueAtTime(0.001, startAt + 0.07);
+  osc.connect(filter);
+  filter.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start(startAt);
+  osc.stop(startAt + 0.09);
+}
+
+function playConfettiRustle(delay = 0, intensity = 1) {
+  const ctx = getEffectAudioContext();
+
+  if (!ctx) {
+    return;
+  }
+
+  const sparkles = Math.floor(14 * intensity);
+
+  for (let index = 0; index < sparkles; index += 1) {
+    playNoiseHit(ctx, {
+      delay: delay + Math.random() * 0.75,
+      duration: 0.025 + Math.random() * 0.03,
+      volume: 0.04 + Math.random() * 0.05,
+      filter: 5600 + Math.random() * 3400,
+      type: "bandpass",
+    });
+  }
+}
+
+function playApplause(delay = 0, intensity = 1, spread = 1.15) {
   const ctx = getEffectAudioContext();
 
   if (!ctx) {
@@ -816,7 +1263,7 @@ function playApplause(delay = 0, intensity = 1) {
 
   for (let index = 0; index < claps; index += 1) {
     playNoiseHit(ctx, {
-      delay: delay + Math.random() * 1.15,
+      delay: delay + Math.random() * spread,
       duration: 0.035 + Math.random() * 0.055,
       volume: 0.16 + Math.random() * 0.18,
       filter: 1100 + Math.random() * 2600,
@@ -897,32 +1344,36 @@ function triggerSpecialEffects() {
 }
 
 function triggerSpecialEffectsWithSound() {
-  playEffectSound("confetti");
-  playNoiseHit(getEffectAudioContext(), { delay: 0.03, duration: 0.08, volume: 0.2, filter: 2600 });
+  playPartyPopper(0, 1);
+  playPartyPopper(0.18, 0.85);
+  playConfettiRustle(0.12, 1.1);
   triggerSpecialEffects();
 }
 
 function triggerSuperEffectsWithSound() {
-  playEffectSound("super");
-  window.setTimeout(() => playEffectSound("confetti"), 90);
-  playExplosion(0.05, 0.65);
-  playApplause(0.14, 0.8);
+  playPartyPopper(0, 1);
+  playPartyPopper(0.22, 0.9);
+  playConfettiRustle(0.1, 1.3);
+  playApplause(0.05, 1.6, 1.6);
+  playApplause(0.55, 1.2, 1.4);
+  playApplause(1.15, 0.9, 1.2);
   triggerSuperEffects();
 }
 
 function triggerMegaEffectsWithSound() {
-  playEffectSound("mega");
-  [80, 210, 420].forEach((delay) => window.setTimeout(() => playEffectSound("super"), delay));
-  [30, 170, 350, 620].forEach((delay, index) => {
-    window.setTimeout(() => playEffectSound("confetti"), delay);
-    playExplosion(delay / 1000, 0.8 + index * 0.16);
-  });
-  playApplause(0.08, 1.7);
-  playCrowdCheer(0.12, 1.55);
+  playMegaExplosionStack();
+  [0, 0.26, 0.55, 0.92].forEach((delay, index) => playExplosion(delay, 0.85 + index * 0.14));
+  playPartyPopper(0.03, 1.1);
+  playPartyPopper(0.34, 1);
+  playPartyPopper(0.72, 1.2);
+  playConfettiRustle(0.2, 1.6);
+  playApplause(0.15, 1.8, 1.6);
+  playCrowdCheer(0.2, 1.6);
   window.setTimeout(() => {
     playCrowdCheer(0, 1.1);
-    playApplause(0, 1.25);
-  }, 650);
+    playApplause(0, 1.3, 1.3);
+    playExplosion(0.25, 1.1);
+  }, 900);
   triggerMegaEffects();
 }
 
@@ -1013,17 +1464,24 @@ function getHorrorAudio() {
     });
   }
 
+  if (!state.purpleScreamerSound) {
+    state.purpleScreamerSound = new Audio("assets/фиолетовый скример.mp3");
+    state.purpleScreamerSound.preload = "auto";
+    state.purpleScreamerSound.volume = 1;
+  }
+
   return {
     music: state.horrorMusic,
     scream: state.horrorScream,
     screamLayers: state.horrorScreamLayers,
+    purpleScreamerSound: state.purpleScreamerSound,
   };
 }
 
 function primeHorrorAudio() {
-  const { music, scream, screamLayers } = getHorrorAudio();
+  const { music, scream, screamLayers, purpleScreamerSound } = getHorrorAudio();
 
-  [music, scream, ...screamLayers].forEach((item) => {
+  [music, scream, ...screamLayers, purpleScreamerSound].forEach((item) => {
     item.preload = "auto";
     item.load();
 
@@ -1032,7 +1490,7 @@ function primeHorrorAudio() {
     } catch {}
   });
 
-  return { music, scream, screamLayers };
+  return { music, scream, screamLayers, purpleScreamerSound };
 }
 
 function playAudio(audio) {
@@ -1062,9 +1520,21 @@ function playScreamerSound() {
   });
 }
 
+function playScreamerSoundAfterFirstPaint() {
+  requestAnimationFrame(() => {
+    requestAnimationFrame(playScreamerSound);
+  });
+}
+
+function playPurpleScreamerSound() {
+  const { purpleScreamerSound } = getHorrorAudio();
+  purpleScreamerSound.volume = 1;
+  playAudio(purpleScreamerSound);
+}
+
 function stopHorrorAudio() {
-  const { music, scream, screamLayers } = getHorrorAudio();
-  [music, scream, ...screamLayers].forEach((audio) => {
+  const { music, scream, screamLayers, purpleScreamerSound } = getHorrorAudio();
+  [music, scream, ...screamLayers, purpleScreamerSound].forEach((audio) => {
     audio.pause();
     audio.currentTime = 0;
   });
@@ -1113,25 +1583,13 @@ function clearScreamerTimers() {
 
 function scheduleScreamerFaces() {
   clearScreamerTimers();
-  const blinkFrames = ["assets/screamer 1.png", "assets/screamer 2.png"];
-  const blinkDuration = 3200;
-  const startedAt = performance.now();
   els.realityBreak.dataset.phase = "blink";
-  els.realityBreakFace.src = blinkFrames[0];
+  els.realityBreakFace.src = "assets/screamer 1.png";
 
-  function blink() {
-    const elapsed = performance.now() - startedAt;
-
-    if (elapsed >= blinkDuration || els.realityBreak.hidden) {
-      return;
-    }
-
-    els.realityBreakFace.src = blinkFrames[Math.floor(elapsed / 120) % blinkFrames.length];
-    state.screamerTimers.push(window.setTimeout(blink, 120));
-  }
-
-  blink();
   state.screamerTimers.push(
+    window.setTimeout(() => {
+      els.realityBreakFace.src = "assets/screamer 2.png";
+    }, 1700),
     window.setTimeout(() => {
       els.realityBreak.dataset.phase = "hold";
       els.realityBreakFace.src = "assets/screamer 3.jpeg";
@@ -1139,6 +1597,7 @@ function scheduleScreamerFaces() {
     window.setTimeout(() => {
       els.realityBreak.dataset.phase = "hold";
       els.realityBreakFace.src = "assets/screamer 4.png";
+      requestAnimationFrame(playPurpleScreamerSound);
     }, 5400),
   );
 }
@@ -1173,7 +1632,7 @@ function startScreamerPhase() {
   els.realityBreakFace.src = "assets/screamer 1.png";
   els.realityBreak.hidden = false;
   scheduleScreamerFaces();
-  playScreamerSound();
+  playScreamerSoundAfterFirstPaint();
   createBitStorm();
   triggerMegaEffects();
 
@@ -1197,6 +1656,7 @@ function startScreamerPhase() {
     els.bitStorm.innerHTML = "";
     clearScreamerTimers();
     stopHorrorAudio();
+    restoreThemeAfterScreamer();
   }, 7200);
 }
 
@@ -1205,10 +1665,12 @@ function breakReality() {
   if (state.realityTimer) {
     window.clearTimeout(state.realityTimer);
   }
+  duckThemeForScreamer();
   stopHorrorAudio();
   els.realityDecay.hidden = false;
   els.realityBreak.hidden = true;
   els.realityBreak.dataset.phase = "blink";
+  els.realityBreakFace.src = "assets/screamer 1.png";
   els.bitStorm.innerHTML = "";
   primeHorrorAudio();
   primeScreamerImages();
@@ -1231,10 +1693,12 @@ function stopRealityMeltdown() {
   els.bitStorm.innerHTML = "";
   clearScreamerTimers();
   stopHorrorAudio();
+  restoreThemeAfterScreamer();
 }
 
 setupConfetti();
 setupLaughAnimation();
+setupBackgroundMusic();
 
 els.startButtons.forEach((button) => {
   button.addEventListener("click", openQuizWindow);
@@ -1252,8 +1716,15 @@ els.restartButton.addEventListener("click", restartQuiz);
 els.retryButton.addEventListener("click", restartQuiz);
 els.revealButton.addEventListener("click", openModal);
 els.closeModalButtons.forEach((button) => button.addEventListener("click", closeModal));
+els.claimGiftButton.addEventListener("click", openFriendshipFinale);
+els.closeFinaleButtons.forEach((button) => button.addEventListener("click", closeFriendshipFinale));
 window.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
+    if (!els.friendshipFinale.hidden) {
+      closeFriendshipFinale();
+      return;
+    }
+
     if (!els.modal.hidden) {
       closeModal();
       return;
