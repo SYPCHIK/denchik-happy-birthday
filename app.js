@@ -126,6 +126,7 @@ const state = {
   horrorScream: null,
   horrorScreamLayers: [],
   effectSounds: {},
+  effectAudioContext: null,
 };
 
 const els = {
@@ -691,7 +692,9 @@ function getEffectSound(name) {
 }
 
 function playEffectSound(name) {
-  const audio = getEffectSound(name);
+  const baseAudio = getEffectSound(name);
+  const audio = baseAudio.cloneNode();
+  audio.volume = baseAudio.volume;
 
   try {
     audio.currentTime = 0;
@@ -701,6 +704,170 @@ function playEffectSound(name) {
 
   if (playAttempt?.catch) {
     playAttempt.catch(() => {});
+  }
+
+  audio.addEventListener("ended", () => audio.remove(), { once: true });
+}
+
+function getEffectAudioContext() {
+  if (!state.effectAudioContext) {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+
+    if (!AudioContext) {
+      return null;
+    }
+
+    state.effectAudioContext = new AudioContext();
+  }
+
+  if (state.effectAudioContext.state === "suspended") {
+    state.effectAudioContext.resume();
+  }
+
+  return state.effectAudioContext;
+}
+
+function createNoiseBuffer(ctx, duration) {
+  const sampleCount = Math.max(1, Math.floor(ctx.sampleRate * duration));
+  const buffer = ctx.createBuffer(1, sampleCount, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+
+  for (let index = 0; index < sampleCount; index += 1) {
+    data[index] = Math.random() * 2 - 1;
+  }
+
+  return buffer;
+}
+
+function playNoiseHit(ctx, { delay = 0, duration = 0.18, volume = 0.35, filter = 1800, type = "bandpass" } = {}) {
+  if (!ctx) {
+    return;
+  }
+
+  const startAt = ctx.currentTime + delay;
+  const source = ctx.createBufferSource();
+  const gain = ctx.createGain();
+  const filterNode = ctx.createBiquadFilter();
+
+  source.buffer = createNoiseBuffer(ctx, duration);
+  filterNode.type = type;
+  filterNode.frequency.setValueAtTime(filter, startAt);
+  filterNode.Q.setValueAtTime(0.82, startAt);
+  gain.gain.setValueAtTime(0.001, startAt);
+  gain.gain.exponentialRampToValueAtTime(volume, startAt + 0.012);
+  gain.gain.exponentialRampToValueAtTime(0.001, startAt + duration);
+
+  source.connect(filterNode);
+  filterNode.connect(gain);
+  gain.connect(ctx.destination);
+  source.start(startAt);
+  source.stop(startAt + duration + 0.04);
+}
+
+function playExplosion(delay = 0, power = 1) {
+  const ctx = getEffectAudioContext();
+
+  if (!ctx) {
+    return;
+  }
+
+  const startAt = ctx.currentTime + delay;
+  const source = ctx.createBufferSource();
+  const filterNode = ctx.createBiquadFilter();
+  const gain = ctx.createGain();
+  const boom = ctx.createOscillator();
+  const boomGain = ctx.createGain();
+
+  source.buffer = createNoiseBuffer(ctx, 0.9);
+  filterNode.type = "lowpass";
+  filterNode.frequency.setValueAtTime(1800 * power, startAt);
+  filterNode.frequency.exponentialRampToValueAtTime(80, startAt + 0.72);
+  gain.gain.setValueAtTime(0.001, startAt);
+  gain.gain.exponentialRampToValueAtTime(0.75 * power, startAt + 0.02);
+  gain.gain.exponentialRampToValueAtTime(0.001, startAt + 0.88);
+
+  boom.type = "sine";
+  boom.frequency.setValueAtTime(88, startAt);
+  boom.frequency.exponentialRampToValueAtTime(34, startAt + 0.55);
+  boomGain.gain.setValueAtTime(0.001, startAt);
+  boomGain.gain.exponentialRampToValueAtTime(0.34 * power, startAt + 0.018);
+  boomGain.gain.exponentialRampToValueAtTime(0.001, startAt + 0.68);
+
+  source.connect(filterNode);
+  filterNode.connect(gain);
+  gain.connect(ctx.destination);
+  boom.connect(boomGain);
+  boomGain.connect(ctx.destination);
+
+  source.start(startAt);
+  source.stop(startAt + 0.95);
+  boom.start(startAt);
+  boom.stop(startAt + 0.7);
+}
+
+function playApplause(delay = 0, intensity = 1) {
+  const ctx = getEffectAudioContext();
+
+  if (!ctx) {
+    return;
+  }
+
+  const claps = Math.floor(20 * intensity);
+
+  for (let index = 0; index < claps; index += 1) {
+    playNoiseHit(ctx, {
+      delay: delay + Math.random() * 1.15,
+      duration: 0.035 + Math.random() * 0.055,
+      volume: 0.16 + Math.random() * 0.18,
+      filter: 1100 + Math.random() * 2600,
+      type: "bandpass",
+    });
+  }
+}
+
+function playCrowdCheer(delay = 0, intensity = 1) {
+  const ctx = getEffectAudioContext();
+
+  if (!ctx) {
+    return;
+  }
+
+  const startAt = ctx.currentTime + delay;
+  const duration = 1.25 * intensity;
+  const noise = ctx.createBufferSource();
+  const noiseFilter = ctx.createBiquadFilter();
+  const noiseGain = ctx.createGain();
+
+  noise.buffer = createNoiseBuffer(ctx, duration);
+  noiseFilter.type = "bandpass";
+  noiseFilter.frequency.setValueAtTime(620, startAt);
+  noiseFilter.Q.setValueAtTime(0.48, startAt);
+  noiseGain.gain.setValueAtTime(0.001, startAt);
+  noiseGain.gain.linearRampToValueAtTime(0.18 * intensity, startAt + 0.2);
+  noiseGain.gain.exponentialRampToValueAtTime(0.001, startAt + duration);
+  noise.connect(noiseFilter);
+  noiseFilter.connect(noiseGain);
+  noiseGain.connect(ctx.destination);
+  noise.start(startAt);
+  noise.stop(startAt + duration);
+
+  for (let index = 0; index < Math.floor(10 * intensity); index += 1) {
+    const voice = ctx.createOscillator();
+    const gain = ctx.createGain();
+    const voiceStart = startAt + Math.random() * 0.22;
+    const voiceDuration = 0.55 + Math.random() * 0.58;
+    const base = 180 + Math.random() * 520;
+
+    voice.type = index % 2 === 0 ? "sawtooth" : "triangle";
+    voice.frequency.setValueAtTime(base, voiceStart);
+    voice.frequency.linearRampToValueAtTime(base * (1.18 + Math.random() * 0.34), voiceStart + voiceDuration);
+    gain.gain.setValueAtTime(0.001, voiceStart);
+    gain.gain.linearRampToValueAtTime(0.028 * intensity, voiceStart + 0.08);
+    gain.gain.exponentialRampToValueAtTime(0.001, voiceStart + voiceDuration);
+    voice.connect(gain);
+    gain.connect(ctx.destination);
+    voice.start(voiceStart);
+    voice.stop(voiceStart + voiceDuration);
   }
 }
 
@@ -731,17 +898,31 @@ function triggerSpecialEffects() {
 
 function triggerSpecialEffectsWithSound() {
   playEffectSound("confetti");
+  playNoiseHit(getEffectAudioContext(), { delay: 0.03, duration: 0.08, volume: 0.2, filter: 2600 });
   triggerSpecialEffects();
 }
 
 function triggerSuperEffectsWithSound() {
   playEffectSound("super");
+  window.setTimeout(() => playEffectSound("confetti"), 90);
+  playExplosion(0.05, 0.65);
+  playApplause(0.14, 0.8);
   triggerSuperEffects();
 }
 
 function triggerMegaEffectsWithSound() {
   playEffectSound("mega");
-  window.setTimeout(() => playEffectSound("super"), 120);
+  [80, 210, 420].forEach((delay) => window.setTimeout(() => playEffectSound("super"), delay));
+  [30, 170, 350, 620].forEach((delay, index) => {
+    window.setTimeout(() => playEffectSound("confetti"), delay);
+    playExplosion(delay / 1000, 0.8 + index * 0.16);
+  });
+  playApplause(0.08, 1.7);
+  playCrowdCheer(0.12, 1.55);
+  window.setTimeout(() => {
+    playCrowdCheer(0, 1.1);
+    playApplause(0, 1.25);
+  }, 650);
   triggerMegaEffects();
 }
 
