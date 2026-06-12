@@ -125,6 +125,7 @@ const state = {
   horrorMusic: null,
   horrorScream: null,
   horrorScreamLayers: [],
+  effectSounds: {},
 };
 
 const els = {
@@ -671,6 +672,38 @@ function addSoundRing(x = window.innerWidth / 2, y = window.innerHeight / 2, col
   ring.addEventListener("animationend", () => ring.remove(), { once: true });
 }
 
+function getEffectSound(name) {
+  const sounds = {
+    confetti: { src: "assets/sfx-confetti.ogg", volume: 0.75 },
+    super: { src: "assets/sfx-super-effects.ogg", volume: 0.82 },
+    mega: { src: "assets/sfx-mega-effects.ogg", volume: 0.9 },
+  };
+
+  if (!state.effectSounds[name]) {
+    const config = sounds[name];
+    const audio = new Audio(config.src);
+    audio.preload = "auto";
+    audio.volume = config.volume;
+    state.effectSounds[name] = audio;
+  }
+
+  return state.effectSounds[name];
+}
+
+function playEffectSound(name) {
+  const audio = getEffectSound(name);
+
+  try {
+    audio.currentTime = 0;
+  } catch {}
+
+  const playAttempt = audio.play();
+
+  if (playAttempt?.catch) {
+    playAttempt.catch(() => {});
+  }
+}
+
 function triggerSpecialEffects() {
   burstConfetti(90, {
     x: window.innerWidth * 0.16,
@@ -694,6 +727,22 @@ function triggerSpecialEffects() {
     power: 7,
   });
   addSoundRing(window.innerWidth * 0.5, window.innerHeight * 0.45, "#ffd66b");
+}
+
+function triggerSpecialEffectsWithSound() {
+  playEffectSound("confetti");
+  triggerSpecialEffects();
+}
+
+function triggerSuperEffectsWithSound() {
+  playEffectSound("super");
+  triggerSuperEffects();
+}
+
+function triggerMegaEffectsWithSound() {
+  playEffectSound("mega");
+  window.setTimeout(() => playEffectSound("super"), 120);
+  triggerMegaEffects();
 }
 
 function triggerSuperEffects() {
@@ -1010,9 +1059,9 @@ els.startButtons.forEach((button) => {
   button.addEventListener("click", openQuizWindow);
 });
 
-els.confettiButton.addEventListener("click", triggerSpecialEffects);
-els.superEffectsButton.addEventListener("click", triggerSuperEffects);
-els.megaEffectsButton.addEventListener("click", triggerMegaEffects);
+els.confettiButton.addEventListener("click", triggerSpecialEffectsWithSound);
+els.superEffectsButton.addEventListener("click", triggerSuperEffectsWithSound);
+els.megaEffectsButton.addEventListener("click", triggerMegaEffectsWithSound);
 els.realityWarningButton.addEventListener("click", openRealityWarning);
 els.closeRealityWarningButtons.forEach((button) => button.addEventListener("click", closeRealityWarning));
 els.breakRealityButton.addEventListener("click", breakReality);

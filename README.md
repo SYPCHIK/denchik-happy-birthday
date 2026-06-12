@@ -43,3 +43,7 @@
 - `denchik-laugh-4.png` — голова чуть ниже
 
 Сайт сам будет переключать их как мини-анимацию смеха.
+
+## Звуки спецэффектов
+
+Файлы `sfx-confetti.ogg`, `sfx-super-effects.ogg` и `sfx-mega-effects.ogg` взяты из Kenney Interface Sounds под лицензией Creative Commons Zero (CC0): https://kenney.nl/assets/interface-sounds
