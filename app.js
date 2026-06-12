@@ -10,7 +10,7 @@ const gifts = {
       "Победил вариант, где друзья официально получают право собрать тебе образ и сделать вид, что так и было задумано.",
   },
   squad: {
-    name: "Стрелялка Сквад",
+    name: "Диск с игрой",
     shortName: "Сквад",
     tag: "Сид 2: тактический подарок",
     image: "assets/gift-squad.png",
@@ -113,7 +113,9 @@ const tournamentRounds = [
   },
 ];
 
-const TOURNAMENT_CHOICE_ADVANCE_DELAY = 60;
+const TOURNAMENT_CHOICE_ADVANCE_DELAY = 120;
+const TOURNAMENT_CLICK_SOUND_SRC = "assets/minecraft_click.mp3";
+const TOURNAMENT_CLICK_SOUND_OFFSET = 0.2;
 
 const state = {
   roundIndex: 0,
@@ -132,6 +134,8 @@ const state = {
   tournamentClickSounds: [],
   tournamentClickSoundIndex: 0,
   tournamentClickSoundPrimed: false,
+  tournamentClickBuffer: null,
+  tournamentClickBufferPromise: null,
   partyPopperSound: null,
   megaExplosionSound: null,
   openGiftSound: null,
@@ -313,8 +317,7 @@ function renderTournamentMatch() {
 
       isChosen = true;
       card.classList.add("gift-duel-card--chosen");
-      playTournamentClickSound();
-      window.setTimeout(() => selectTournamentWinner(giftKey, { playSound: false }), TOURNAMENT_CHOICE_ADVANCE_DELAY);
+      window.setTimeout(() => selectTournamentWinner(giftKey), TOURNAMENT_CHOICE_ADVANCE_DELAY);
     };
 
     card.addEventListener("pointerdown", chooseGift);
@@ -334,7 +337,6 @@ function announceRound(label, title, onDone) {
   els.roundAnnouncerTitle.textContent = title;
   els.roundAnnouncer.hidden = false;
   playRoundAnnounceSound();
-  triggerSpecialEffects();
 
   window.setTimeout(() => {
     els.roundAnnouncer.hidden = true;
@@ -356,12 +358,6 @@ function selectTournamentWinner(giftKey, { playSound = true } = {}) {
   });
 
   state.winners[round.id][state.matchIndex] = giftKey;
-  burstConfetti(48, {
-    x: Math.random() * window.innerWidth,
-    y: window.innerHeight * 0.34,
-    spread: Math.PI * 2,
-    power: 9,
-  });
 
   if (round.id === "final") {
     showResult(giftKey);
@@ -759,7 +755,7 @@ function addSoundRing(x = window.innerWidth / 2, y = window.innerHeight / 2, col
 function getTournamentClickSounds() {
   if (state.tournamentClickSounds.length === 0) {
     state.tournamentClickSounds = Array.from({ length: 5 }, () => {
-      const audio = new Audio("assets/minecraft_click.mp3");
+      const audio = new Audio(TOURNAMENT_CLICK_SOUND_SRC);
       audio.preload = "auto";
       audio.volume = 0.95;
       audio.load();
@@ -770,7 +766,35 @@ function getTournamentClickSounds() {
   return state.tournamentClickSounds;
 }
 
+function loadTournamentClickBuffer() {
+  if (state.tournamentClickBuffer || state.tournamentClickBufferPromise) {
+    return state.tournamentClickBufferPromise;
+  }
+
+  const ctx = getEffectAudioContext();
+
+  if (!ctx || !window.fetch) {
+    return null;
+  }
+
+  state.tournamentClickBufferPromise = fetch(TOURNAMENT_CLICK_SOUND_SRC)
+    .then((response) => response.arrayBuffer())
+    .then((arrayBuffer) => ctx.decodeAudioData(arrayBuffer))
+    .then((buffer) => {
+      state.tournamentClickBuffer = buffer;
+      return buffer;
+    })
+    .catch(() => {
+      state.tournamentClickBufferPromise = null;
+      return null;
+    });
+
+  return state.tournamentClickBufferPromise;
+}
+
 function primeTournamentClickSound() {
+  loadTournamentClickBuffer();
+
   getTournamentClickSounds().forEach((audio) => {
     audio.load();
 
@@ -833,12 +857,31 @@ function primePartyPopperSound() {
 }
 
 function playTournamentClickSound() {
+  const ctx = getEffectAudioContext();
+
+  if (ctx?.state === "suspended") {
+    ctx.resume().catch(() => {});
+  }
+
+  if (ctx && state.tournamentClickBuffer) {
+    const source = ctx.createBufferSource();
+    const gain = ctx.createGain();
+    source.buffer = state.tournamentClickBuffer;
+    gain.gain.value = 1;
+    source.connect(gain);
+    gain.connect(ctx.destination);
+    source.start(0, TOURNAMENT_CLICK_SOUND_OFFSET);
+    return;
+  }
+
+  loadTournamentClickBuffer();
+
   const sounds = getTournamentClickSounds();
   const audio = sounds[state.tournamentClickSoundIndex % sounds.length];
   state.tournamentClickSoundIndex += 1;
 
   try {
-    audio.currentTime = 0;
+    audio.currentTime = TOURNAMENT_CLICK_SOUND_OFFSET;
   } catch {}
 
   const playAttempt = audio.play();
