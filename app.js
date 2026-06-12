@@ -1296,16 +1296,18 @@ function clearThemeFade() {
   }
 }
 
-function playTheme(which, { restart = false } = {}) {
+function playTheme(which, { restart = false, forceStart = false } = {}) {
   state.activeTheme = which;
 
-  if (!state.musicStarted) {
-    return;
+  if (!state.musicStarted && !forceStart) {
+    return null;
   }
 
   clearThemeFade();
   const active = which === "final" ? getFinalTheme() : getMainTheme();
   const inactive = which === "final" ? getMainTheme() : getFinalTheme();
+  active.muted = state.soundMuted;
+  inactive.muted = state.soundMuted;
   inactive.pause();
 
   if (restart) {
@@ -1318,8 +1320,14 @@ function playTheme(which, { restart = false } = {}) {
   const playAttempt = active.play();
 
   if (playAttempt?.catch) {
-    playAttempt.catch(() => {});
+    playAttempt.catch(() => {
+      if (forceStart && active.paused) {
+        state.musicStarted = false;
+      }
+    });
   }
+
+  return playAttempt;
 }
 
 function duckThemeForScreamer() {
@@ -1336,6 +1344,7 @@ function restoreThemeAfterScreamer() {
   clearThemeFade();
   const active = state.activeTheme === "final" ? getFinalTheme() : getMainTheme();
   const target = state.activeTheme === "final" ? FINAL_THEME_VOLUME : MAIN_THEME_VOLUME;
+  active.muted = state.soundMuted;
   active.volume = 0;
   const playAttempt = active.play();
 
@@ -1353,20 +1362,24 @@ function restoreThemeAfterScreamer() {
   }, 120);
 }
 
-function setupBackgroundMusic() {
-  const start = () => {
-    if (state.musicStarted) {
-      return;
-    }
+function startBackgroundMusic() {
+  const active = state.activeTheme === "final" ? getFinalTheme() : getMainTheme();
 
-    state.musicStarted = true;
-    primeTournamentClickSound();
-    primePartyPopperSound();
-    playTheme(state.activeTheme);
-  };
+  if (state.musicStarted && !active.paused) {
+    return;
+  }
+
+  state.musicStarted = true;
+  primeTournamentClickSound();
+  primePartyPopperSound();
+  playTheme(state.activeTheme, { forceStart: true });
+}
+
+function setupBackgroundMusic() {
+  window.setTimeout(startBackgroundMusic, 0);
 
   ["pointerdown", "keydown", "touchstart"].forEach((eventName) => {
-    document.addEventListener(eventName, start, { once: true });
+    document.addEventListener(eventName, startBackgroundMusic);
   });
 }
 
@@ -1392,6 +1405,10 @@ function setSoundMuted(muted) {
   getThemeAudioElements().forEach((audio) => {
     audio.muted = muted;
   });
+
+  if (!muted) {
+    startBackgroundMusic();
+  }
 
   updateMusicToggleButton();
 }
